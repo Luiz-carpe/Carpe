@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="780" viewBox="0 0 1000 780">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+
+  <text x="500" y="35" text-anchor="middle" font-family="Arial" font-size="24" font-weight="bold" fill="#333333">
+    Fibroblasto – esquema didático
+  </text>
+  <text x="500" y="60" text-anchor="middle" font-family="Arial" font-size="14" fill="#666666">
+    (representação esquemática, fora de escala)
+  </text>
+
+  <!-- Prolongamentos citoplasmáticos -->
+  <path d="M255,365 C210,355 180,330 145,320 C170,355 180,385 250,405 Z"
+        fill="#fde8ee" stroke="#b23a5a" stroke-width="4"/>
+  <path d="M630,330 C675,310 705,285 735,275 C710,310 700,345 635,385 Z"
+        fill="#fde8ee" stroke="#b23a5a" stroke-width="4"/>
+
+  <!-- Corpo celular / membrana e citoplasma -->
+  <path d="M250,380 C245,320 285,255 355,245 C405,238 435,265 485,245
+           C545,220 625,255 635,315 C645,375 615,435 565,465
+           C515,495 455,485 405,505 C345,525 265,475 250,415 Z"
+        fill="#fde8ee" stroke="#b23a5a" stroke-width="4"/>
+
+  <!-- Núcleo -->
+  <ellipse cx="420" cy="350" rx="78" ry="58" fill="#d8c4f0" stroke="#6b4c9a" stroke-width="4"/>
+  <!-- Nucléolo -->
+  <circle cx="442" cy="350" r="18" fill="#6b4c9a"/>
+
+  <!-- RER -->
+  <g fill="none" stroke="#2e7d32" stroke-width="4">
+    <path d="M290,300 Q305,285 320,300 T350,300"/>
+    <path d="M290,320 Q305,305 320,320 T350,320"/>
+    <path d="M290,340 Q305,325 320,340 T350,340"/>
+    <path d="M290,360 Q305,345 320,360 T350,360"/>
+    <path d="M290,380 Q305,365 320,380 T350,380"/>
+  </g>
+  <g fill="#2e7d32">
+    <circle cx="300" cy="296" r="3.5"/><circle cx="315" cy="304" r="3.5"/>
+    <circle cx="330" cy="296" r="3.5"/><circle cx="345" cy="304" r="3.5"/>
+    <circle cx="300" cy="316" r="3.5"/><circle cx="315" cy="324" r="3.5"/>
+    <circle cx="330" cy="316" r="3.5"/><circle cx="345" cy="324" r="3.5"/>
+    <circle cx="300" cy="336" r="3.5"/><circle cx="315" cy="344" r="3.5"/>
+    <circle cx="330" cy="336" r="3.5"/><circle cx="345" cy="344" r="3.5"/>
+    <circle cx="300" cy="356" r="3.5"/><circle cx="315" cy="364" r="3.5"/>
+    <circle cx="330" cy="356" r="3.5"/><circle cx="345" cy="364" r="3.5"/>
+    <circle cx="300" cy="376" r="3.5"/><circle cx="315" cy="384" r="3.5"/>
+    <circle cx="330" cy="376" r="3.5"/><circle cx="345" cy="384" r="3.5"/>
+  </g>
+
+  <!-- Mitocôndrias -->
+  <g transform="translate(545,295) rotate(-20)">
+    <ellipse cx="0" cy="0" rx="45" ry="22" fill="#f7b267" stroke="#b35c00" stroke-width="3"/>
+    <path d="M-30,0 Q-15,-14 0,0 T30,0" fill="none" stroke="#b35c00" stroke-width="3"/>
+  </g>
+  <g transform="translate(540,440) rotate(15)">
+    <ellipse cx="0" cy="0" rx="45" ry="22" fill="#f7b267" stroke="#b35c00" stroke-width="3"/>
+    <path d="M-30,0 Q-15,-14 0,0 T30,0" fill="none" stroke="#b35c00" stroke-width="3"/>
+  </g>
+
+  <!-- Complexo de Golgi -->
+  <g fill="none" stroke="#8e44ad" stroke-width="5">
+    <path d="M510,360 Q540,345 570,360"/>
+    <path d="M510,375 Q540,360 570,375"/>
+    <path d="M510,390 Q540,375 570,390"/>
+  </g>
+
+  <!-- Ribossomos livres -->
+  <g fill="#333333">
+    <circle cx="320" cy="430" r="4"/><circle cx="360" cy="460" r="4"/>
+    <circle cx="470" cy="450" r="4"/><circle cx="600" cy="345" r="4"/>
+    <circle cx="595" cy="420" r="4"/><circle cx="490" cy="475" r="4"/>
+    <circle cx="380" cy="260" r="4"/><circle cx="480" cy="265" r="4"/>
+    <circle cx="275" cy="420" r="4"/>
+  </g>
+
+  <!-- Fibras de colágeno (fora da célula) -->
+  <g fill="none" stroke="#8d6e63" stroke-width="3">
+    <path d="M40,215 Q90,195 140,215 T240,215"/>
+    <path d="M30,250 Q80,230 130,250 T230,250"/>
+    <path d="M740,420 Q790,400 840,420 T940,420"/>
+    <path d="M730,460 Q780,440 830,460 T930,460"/>
+  </g>
+
+  <!-- Linhas de chamada -->
+  <g stroke="#999999" stroke-width="1">
+    <line x1="230" y1="430" x2="252" y2="412"/>   <!-- 1 membrana -->
+    <line x1="420" y1="540" x2="420" y2="480"/>   <!-- 2 citoplasma -->
+    <line x1="420" y1="270" x2="420" y2="300"/>   <!-- 3 núcleo -->
+    <line x1="470" y1="425" x2="448" y2="366"/>   <!-- 4 nucléolo -->
+    <line x1="285" y1="280" x2="300" y2="300"/>   <!-- 5 RER -->
+    <line x1="650" y1="250" x2="575" y2="285"/>   <!-- 6 mitocôndria -->
+    <line x1="290" y1="470" x2="318" y2="433"/>   <!-- 7 ribossomo -->
+    <line x1="655" y1="420" x2="572" y2="385"/>   <!-- 8 Golgi -->
+    <line x1="110" y1="295" x2="175" y2="330"/>   <!-- 9 prolongamento -->
+    <line x1="930" y1="380" x2="905" y2="428"/>   <!-- 10 colágeno -->
+  </g>
+
+  <!-- Números -->
+  <g font-family="Arial" font-size="14" font-weight="bold">
+    <circle cx="230" cy="430" r="13" fill="#333333"/>
+    <text x="230" y="435" text-anchor="middle" fill="#ffffff">1</text>
+
+    <circle cx="420" cy="540" r="13" fill="#333333"/>
+    <text x="420" y="545" text-anchor="middle" fill="#ffffff">2</text>
+
+    <circle cx="420" cy="270" r="13" fill="#333333"/>
+    <text x="420" y="275" text-anchor="middle" fill="#ffffff">3</text>
+
+    <circle cx="470" cy="425" r="13" fill="#333333"/>
+    <text x="470" y="430" text-anchor="middle" fill="#ffffff">4</text>
+
+    <circle cx="285" cy="280" r="13" fill="#333333"/>
+    <text x="285" y="285" text-anchor="middle" fill="#ffffff">5</text>
+
+    <circle cx="650" cy="250" r="13" fill="#333333"/>
+    <text x="650" y="255" text-anchor="middle" fill="#ffffff">6</text>
+
+    <circle cx="290" cy="470" r="13" fill="#333333"/>
+    <text x="290" y="475" text-anchor="middle" fill="#ffffff">7</text>
+
+    <circle cx="655" cy="420" r="13" fill="#333333"/>
+    <text x="655" y="425" text-anchor="middle" fill="#ffffff">8</text>
+
+    <circle cx="110" cy="295" r="13" fill="#333333"/>
+    <text x="110" y="300" text-anchor="middle" fill="#ffffff">9</text>
+
+    <circle cx="930" cy="380" r="13" fill="#333333"/>
+    <text x="930" y="385" text-anchor="middle" fill="#ffffff">10</text>
+  </g>
+
+  <!-- Legenda -->
+  <rect x="40" y="600" width="920" height="150" rx="10" fill="#fafafa" stroke="#cccccc"/>
+  <g font-family="Arial" font-size="14" fill="#333333">
+    <text x="60" y="630"><tspan font-weight="bold">1</tspan> Membrana plasmática</text>
+    <text x="60" y="655"><tspan font-weight="bold">2</tspan> Citoplasma</text>
+    <text x="60" y="680"><tspan font-weight="bold">3</tspan> Núcleo</text>
+    <text x="60" y="705"><tspan font-weight="bold">4</tspan> Nucléolo</text>
+    <text x="60" y="730"><tspan font-weight="bold">5</tspan> Retículo endoplasmático rugoso (RER)</text>
+
+    <text x="520" y="630"><tspan font-weight="bold">6</tspan> Mitocôndrias</text>
+    <text x="520" y="655"><tspan font-weight="bold">7</tspan> Ribossomos livres</text>
+    <text x="520" y="680"><tspan font-weight="bold">8</tspan> Complexo de Golgi</text>
+    <text x="520" y="705"><tspan font-weight="bold">9</tspan> Prolongamentos citoplasmáticos</text>
+    <text x="520" y="730"><tspan font-weight="bold">10</tspan> Fibras de colágeno (matriz extracelular)</text>
+  </g>
+</svg>
