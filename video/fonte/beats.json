@@ -1,0 +1,350 @@
+{
+ "scenes": [
+  {
+   "id": "space",
+   "chapter": "1 · O ESPAÇO",
+   "beats": [
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.35
+    },
+    {
+     "who": "HOUSTON",
+     "say": "Comandante, não atenda!",
+     "cap": "Comandante, NÃO *ATENDA*!"
+    },
+    {
+     "who": "TIAGO",
+     "say": "Se eu não atender, ela liga pra nasa.",
+     "cap": "Se eu não atender, ela liga pra *NASA*."
+    },
+    {
+     "mark": "answer"
+    },
+    {
+     "who": "TIAGO",
+     "say": "Oi, mãe.",
+     "cap": "Oi, *mãe*."
+    },
+    {
+     "who": "MAE",
+     "say": "Tá frio aí? Levou casaco?",
+     "cap": "Tá frio aí? Levou *casaco*?"
+    },
+    {
+     "mark": "temp"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "who": "TIAGO",
+     "say": "Lê, lê, levei.",
+     "cap": "L-l-*levei*."
+    },
+    {
+     "who": "MAE",
+     "say": "Mentira. Tô ouvindo seu dente bater daqui.",
+     "cap": "Mentira. Tô ouvindo seu *dente bater* daqui."
+    },
+    {
+     "pause": 0.2
+    }
+   ]
+  },
+  {
+   "id": "bomb",
+   "chapter": "2 · A BOMBA",
+   "beats": [
+    {
+     "pause": 0.15
+    },
+    {
+     "who": "COSTA",
+     "say": "Vermelho ou azul?! Vermelho ou azul?!",
+     "cap": "*Vermelho* ou *azul*?! VERMELHO OU AZUL?!"
+    },
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.45
+    },
+    {
+     "who": "COSTA",
+     "say": "Não atende!",
+     "cap": "NÃO *ATENDE*!"
+    },
+    {
+     "mark": "answer"
+    },
+    {
+     "who": "MAE",
+     "say": "Vai sair? Leva o casaco azul, que o vermelho tá sujo.",
+     "cap": "Vai sair? Leva o casaco *azul*, que o vermelho tá sujo."
+    },
+    {
+     "mark": "cut"
+    },
+    {
+     "pause": 0.9
+    },
+    {
+     "who": "COSTA",
+     "say": "Pede pra ela os números da mega-sena.",
+     "cap": "...Pede pra ela os números da *Mega-Sena*.",
+     "fx": "whisper"
+    },
+    {
+     "pause": 0.2
+    }
+   ]
+  },
+  {
+   "id": "ufo",
+   "chapter": "3 · A ABDUÇÃO",
+   "beats": [
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.4
+    },
+    {
+     "who": "LUCAS",
+     "say": "Mãe, tô sendo abduzido!",
+     "cap": "MÃE, TÔ SENDO *ABDUZIDO*!"
+    },
+    {
+     "who": "MAE",
+     "say": "Eu já falei pra não entrar em carro de estranho!",
+     "cap": "Eu já falei pra não entrar em *carro de estranho*!"
+    },
+    {
+     "who": "LUCAS",
+     "say": "É um disco voador, mãe!",
+     "cap": "É um *DISCO VOADOR*, mãe!"
+    },
+    {
+     "who": "MAE",
+     "say": "Pior ainda!",
+     "cap": "*PIOR AINDA*!"
+    },
+    {
+     "mark": "cockpit"
+    },
+    {
+     "pause": 0.55
+    },
+    {
+     "who": "GLORP",
+     "say": "Glorbi zuá, ziplu blip.",
+     "cap": "[Tá, mãe… tô *soltando* ele.]"
+    },
+    {
+     "mark": "drop"
+    },
+    {
+     "pause": 0.8
+    },
+    {
+     "who": "MAE",
+     "say": "Pronto. Liguei pra mãe dele.",
+     "cap": "Pronto. Liguei pra *mãe dele*."
+    },
+    {
+     "mark": "kitchen"
+    },
+    {
+     "pause": 1.2
+    }
+   ]
+  },
+  {
+   "id": "dragon",
+   "chapter": "4 · O DRAGÃO",
+   "beats": [
+    {
+     "pause": 0.6
+    },
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "who": "IGNACIO",
+     "say": "Oi, mãe.",
+     "cap": "...Oi, *mãe*."
+    },
+    {
+     "who": "MAE",
+     "say": "Tá brincando com fogo de novo?! Vai fazer xixi na cama!",
+     "cap": "TÁ BRINCANDO COM *FOGO* DE NOVO?! VAI FAZER *XIXI NA CAMA*!"
+    },
+    {
+     "mark": "swallow"
+    },
+    {
+     "pause": 0.7
+    },
+    {
+     "who": "CAVALEIRO",
+     "say": "Você faz xixi na cama?",
+     "cap": "...Você faz *xixi na cama*?"
+    },
+    {
+     "who": "IGNACIO",
+     "say": "Às vezes.",
+     "cap": "...*Às vezes*."
+    },
+    {
+     "pause": 0.3
+    }
+   ]
+  },
+  {
+   "id": "shark",
+   "chapter": "5 · O TUBARÃO",
+   "beats": [
+    {
+     "pause": 1.0
+    },
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.4
+    },
+    {
+     "who": "MAE",
+     "say": "Acabou de almoçar e já tá na água?! Vai dar congestão!",
+     "cap": "ACABOU DE *ALMOÇAR* E JÁ TÁ NA ÁGUA?! VAI DAR *CONGESTÃO*!"
+    },
+    {
+     "mark": "beach"
+    },
+    {
+     "pause": 1.9
+    }
+   ]
+  },
+  {
+   "id": "dino",
+   "chapter": "6 · A EXTINÇÃO",
+   "beats": [
+    {
+     "pause": 0.9
+    },
+    {
+     "mark": "jungle"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "mark": "ring"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "who": "TRICO",
+     "say": "Rex! É tua mãe. Atende!",
+     "cap": "Rex… é tua mãe. *ATENDE*!"
+    },
+    {
+     "mark": "reach"
+    },
+    {
+     "pause": 1.1
+    },
+    {
+     "mark": "audio"
+    },
+    {
+     "pause": 0.3
+    },
+    {
+     "who": "MAE",
+     "say": "Rex. Eu tô vendo que você tá online. Vou contar até três.",
+     "cap": "Rex. Eu tô vendo que você tá *online*. Vou contar até *três*."
+    },
+    {
+     "mark": "flee"
+    },
+    {
+     "pause": 0.8
+    },
+    {
+     "who": "ANCESTRAL",
+     "say": "Oi, mãe! Tô em casa!",
+     "cap": "Oi, mãe! Tô em *casa*!"
+    },
+    {
+     "mark": "count"
+    },
+    {
+     "who": "MAE",
+     "say": "Um... Dois...",
+     "cap": "Um… *Dois*…"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "who": "MAE",
+     "say": "Dois e meio...",
+     "cap": "…Dois e *meio*…"
+    },
+    {
+     "pause": 0.45
+    },
+    {
+     "who": "MAE",
+     "say": "Três.",
+     "cap": "*TRÊS*.",
+     "fx": "cold"
+    },
+    {
+     "mark": "silence"
+    },
+    {
+     "pause": 0.6
+    },
+    {
+     "mark": "meteor"
+    },
+    {
+     "pause": 2.6
+    },
+    {
+     "mark": "extinct"
+    },
+    {
+     "pause": 1.8
+    },
+    {
+     "mark": "ash"
+    },
+    {
+     "pause": 0.5
+    },
+    {
+     "who": "ANCESTRAL",
+     "say": "Tô vivo, mãe.",
+     "cap": "...Tô *vivo*, mãe."
+    },
+    {
+     "mark": "final"
+    },
+    {
+     "pause": 2.0
+    }
+   ]
+  }
+ ]
+}
