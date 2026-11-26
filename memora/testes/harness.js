@@ -25,7 +25,7 @@ class Cloud {
     const key = src.page; const off = this.offline.has(key);
     await sleep(this.latency);
     if (off && !["listen", "unlisten", "event"].includes(op)) return { error: { code: "unavailable", message: "offline" } };
-    const f = this.takeFail(op, a.path || ""); if (f) return { error: f };
+    const f = this.takeFail(op, a.path || a.prompt || ""); if (f) return { error: f };
     switch (op) {
       case "get": return { data: this.docs.has(a.path) ? clone(this.docs.get(a.path).data) : null };
       case "set": return this.write(src, a.path, () => clone(a.data));
@@ -88,7 +88,7 @@ class Cloud {
 }
 function mergeDeep(t, s) { for (const [k, v] of Object.entries(s)) { if (isPlain(v) && isPlain(t[k])) mergeDeep(t[k], v); else t[k] = clone(v); } return t; }
 
-function defaultAI(a) {
+function defaultAI(a, cloud) {
   const p = a.prompt;
   if (/Memora IA, especialista em criar flashcards/.test(p)) {
     const n = Math.min(80, +(p.match(/exatamente (\d+) flashcards/) || [])[1] || 5);
@@ -96,6 +96,18 @@ function defaultAI(a) {
   }
   if (/planejador de estudos/.test(p)) return { json: { resumo: "Mais tempo para Química, que tem prova perto.", blocos: [{ day: 0, start: "14:00", end: "15:30", subject: "Química", title: "Exercícios de equilíbrio" }, { day: 2, start: "19:00", end: "20:00", subject: "Biologia", title: "Revisão de genética" }, { day: 9, start: "10:00", end: "11:00", subject: "X", title: "inválido" }] } };
   if (/professor coordenador de cursinho/.test(p)) return { json: { resumo: "Bom desempenho geral; foco em estequiometria.", fortes: ["Biologia"], conteudos: [{ materia: "Química", conteudo: "Estequiometria — rendimento", questoes: [1, 5], prioridade: "alta", porque: "Errou cálculo de rendimento", dica: "Monte a regra de três com mols" }, { materia: "Física", conteudo: "Cinemática — MUV", questoes: [9], prioridade: "media", porque: "Confundiu fórmulas", dica: "Use Torricelli" }], plano: ["Revisar estequiometria", "Fazer 20 questões de MUV"], questoes: [{ n: 9, materia: "Física", conteudo: "MUV" }, { n: 13, materia: "Física", conteudo: "Queda livre" }] } };
+  if (/vai planejar um SIMULADO INÉDITO/.test(p)) {
+    const areas = [...p.matchAll(/^- (.+): (\d+) questões$/gm)].map(m => [m[1], +m[2]]);
+    const plano = []; areas.forEach(([d, n]) => { for (let i = 0; i < n; i++) plano.push({ disciplina: d, conteudo: `${d} — tópico ${i + 1}`, habilidade: "aplicar o conceito", dificuldade: ["facil", "media", "dificil"][i % 3] }); });
+    return { json: { titulo: "Simulado inédito de teste", estilo: "Enunciados objetivos com texto-base curto.", plano }, delay: 0 };
+  }
+  if (/Escreva as questões .* do simulado inédito/.test(p)) {
+    const lista = JSON.parse((p.match(/Questões a escrever: (.*)$/m) || [])[1] || "[]");
+    const alts = +(p.match(/exatamente (\d) alternativas/) || [])[1] || 5; const L = "ABCDE".slice(0, alts).split("");
+    const longo = /ENEM/.test(p);
+    return { json: { questoes: lista.map(q => ({ n: q.n, texto: longo ? `Texto-base da questão ${q.n}. ` + "Situação do cotidiano descrita com dados e contexto para a leitura do estudante. ".repeat(14) : "", enunciado: `(${q.disciplina}) Enunciado inédito da questão ${q.n} sobre ${q.conteudo}. Assinale a alternativa correta.`, alternativas: L.map(l => `${l === q.correta ? "Resposta certa" : "Distrator"} ${l} da questão ${q.n}` + (longo ? " com uma explicação um pouco mais longa para ficar parecida com a prova real" : "")), gabarito: q.correta, resolucao: `A correta é a ${q.correta} porque aplica o conceito pedido. As outras confundem a definição.` + (longo ? " Detalhes adicionais da resolução para o estudante revisar depois.".repeat(5) : "") })) }, delay: cloud.genDelay || 0 };
+  }
+  if (/proposta de redação INÉDITA/.test(p)) return { json: { tema: "Os desafios do acesso à leitura no Brasil", genero: "Texto dissertativo-argumentativo", instrucoes: "Escreva de 7 a 30 linhas. Fuga ao tema leva nota zero.", textos: ["Texto motivador um, escrito para o simulado.", "Texto motivador dois.", "Texto motivador três."] } };
   if (/Crie UM flashcard de revisão/.test(p)) return { json: { front: "Como calcular rendimento?", back: "Rendimento = real / teórico × 100%" } };
   if (/Explique de forma clara/.test(p)) return { text: "Ka mede a força de um ácido. Exemplo: ácido acético. Pegadinha: Ka alto = ácido forte." };
   if (/resolução caprichada/.test(p)) return { text: "O QUE A QUESTÃO PEDE: calcular o rendimento.\nRESOLUÇÃO PASSO A PASSO: ...\nPEGADINHA E COMO EVITAR: unidades." };

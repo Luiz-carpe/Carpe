@@ -1,4 +1,4 @@
-// Bateria completa: node e2e.js [web|ipad|sync|limits|migra|extra|all]
+// Bateria completa: node e2e.js [web|ipad|sync|limits|migra|extra|gerar|all]
 const fs = require("fs"); const path = require("path");
 const H = require("./harness"); const { Cloud, openDevice, reload, ev, cloudReady, settle, sleep, R, ok, section, step } = H;
 const { walkthrough, U } = require("./walkthrough");
@@ -327,6 +327,7 @@ async function scenarioExtra(browser, files) {
     if (which === "limits" || which === "all") await scenarioLimits(browser);
     if (which === "migra" || which === "all") await scenarioMigration(browser);
     if (which === "extra" || which === "all") await scenarioExtra(browser, files);
+    if (which === "gerar" || which === "all") await require("./gerar").scenarioGerar(browser, files);
   } catch (e) { R.fail.push("EXCEÇÃO GERAL: " + (e.stack || e)); console.log(e); }
   await browser.close();
   console.log(`\n==== ${R.pass} verificações passaram, ${R.fail.length} falharam (${((Date.now() - t0) / 1000).toFixed(0)} s) ====`);

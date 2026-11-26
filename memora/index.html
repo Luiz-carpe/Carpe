@@ -222,6 +222,39 @@ a.urg-u1,a.urg-u2,a.urg-u3,a.urg-u4,a.urg-u0{text-decoration:none;font-weight:60
 .bkst{display:flex;align-items:center;gap:8px;font-weight:600}
 .item.err.done .t{text-decoration:none;color:var(--muted)}
 .errnote{white-space:pre-wrap;overflow-wrap:anywhere}
+.genhero{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.genhero .grow{flex:1 1 320px}.genhero h2{display:flex;gap:8px;align-items:center;margin:0}.genhero h2 svg{width:20px;height:20px;color:var(--accent)}
+.genprog{display:flex;flex-direction:column;gap:8px}
+.take{display:flex;flex-direction:column;gap:12px;max-width:900px;margin:0 auto}
+.takebar{position:sticky;top:8px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.takebar .grow{flex:1;display:flex;flex-direction:column;min-width:120px}.takebar .grow b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tkclock{font-size:1.15rem;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--panel2)}.tkclock.late{color:var(--bad)}
+.tkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px}
+.tkn{min-height:40px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;cursor:pointer;font:600 .85rem ui-monospace,monospace;position:relative}
+.tkn.ans{background:color-mix(in srgb,var(--accent) 22%,var(--panel));border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.tkn.flag::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.tkn.cur{outline:2px solid var(--accent);outline-offset:1px}
+.tkq{display:flex;flex-direction:column;gap:12px}
+.tktext{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel2);border-left:3px solid var(--line);border-radius:8px;padding:10px 12px;line-height:1.55;margin:6px 0}
+.tkstem{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;font-size:1.02rem}
+.tkalts{display:flex;flex-direction:column;gap:8px}
+.tkalt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:10px;padding:11px 12px;cursor:pointer;font:inherit;line-height:1.45;min-height:48px}
+.tkalt b{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:.85rem}
+.tkalt span{flex:1;white-space:pre-wrap;overflow-wrap:anywhere;padding-top:3px}
+.tkalt span.pill{flex:none;padding-top:2px}
+.tkalt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel))}.tkalt.on b{background:var(--accent);border-color:var(--accent);color:#fff}
+.tkalt.ro{cursor:default}
+.tkalt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel))}.tkalt.ok b{background:var(--ok);border-color:var(--ok);color:#fff}
+.tkalt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--panel))}.tkalt.bad b{background:var(--bad);border-color:var(--bad);color:#fff}
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 16px}
+.shrow{display:flex;gap:6px;align-items:center}.shrow b{min-width:28px}
+.shl{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;font-weight:700}
+.shl.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tkn.miss{border-style:dashed;color:var(--muted)}
+.tkalt,.tkn,.shl,.qnb{-webkit-tap-highlight-color:transparent}
+@media (hover:none){.tkhint{display:none}}
+.qnb{border:0;background:transparent;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;font:inherit;text-align:left}
+.qrow.an{opacity:.55}.qrow.an .qn{text-decoration:line-through}
 .cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .nogrow .field{flex:none}
 .ttl{flex-wrap:wrap}.ttl .tabs{flex-wrap:nowrap}
@@ -333,6 +366,7 @@ const PEND = new Map();      // "tipo:id" -> {s: enviado em, b: versão da nuvem
 const REMOTE = new Map();    // bloco -> corpo como a nuvem tem
 const RSIZE = new Map(), PSIZE = new Map(), HOMEIDX = new Map(), KSET = new Map();
 const RES = new Map();       // resoluções da IA: "simId:q" -> {sim, q, t}
+const QSTM = new Map();      // questões criadas pela IA: "simId:q" -> {sim, q, t}
 const REV = new Map();       // revisões de cartões: "dia@sessão" -> {d, n, ok}
 const TOOBIG = new Set();
 const MOVED = [];            // itens que mudaram de bloco: {from, id, u, to, keys}
@@ -373,7 +407,8 @@ const sortSubjects = () => S.settings.subjects.sort((a, b) => (a.at || 0) - (b.a
 let CN = { at: 0, v: 8 };
 const cardN = () => { if (Date.now() - CN.at > 1500) { const n = Object.keys(CARDS).length; let p = 8; while (p < 1024 && p * 90 < n) p *= 2; CN = { at: Date.now(), v: p }; } return CN.v; };
 const resSplit = id => { const i = id.lastIndexOf(":"); return [id.slice(0, i), +id.slice(i + 1)]; };
-function simCore(s) { return { ...s, q: (s.q || []).map(x => { if (!x || !("res" in x)) return x; const { res, ...r } = x; return r; }) }; }
+function simCore(s) { return { ...s, q: (s.q || []).map(x => { if (!x || !("res" in x || "qt" in x)) return x; const { res, qt, ...r } = x; return r; }) }; }
+const qtOk = Q => isPlain(Q) && Array.isArray(Q.a) && Q.a.length >= 2 && typeof Q.e === "string" && typeof Q.k === "string";
 function revAgg(d) { let n = 0, ok = 0; for (const v of REV.values()) if (v.d === d) { n += v.n; ok += v.ok; } if (n) S.revlog[d] = { n, ok }; else delete S.revlog[d]; }
 const arrKind = (sec, pre, n, doc) => ({
   items: () => (S[sec] || []).filter(x => x && x.id != null).map(x => [String(x.id), x]),
@@ -419,16 +454,29 @@ const KINDS = {
   sim: {
     items: () => Object.entries(SIMS).map(([id, s]) => [id, simCore(s)]),
     get: id => SIMS[id] ? simCore(SIMS[id]) : undefined,
-    put(id, d) { d = clone(d); if (SIMS[id]) replaceIn(SIMS[id], d); else SIMS[id] = d; (SIMS[id].q || []).forEach((x, i) => { const r = RES.get(id + ":" + i); if (r && x) x.res = r.t; }); },
+    put(id, d) {
+      d = clone(d); const old = SIMS[id] ? (SIMS[id].q || []).map(x => x ? { res: x.res, qt: x.qt } : {}) : [];   // resolução e questão moram em outros blocos: não se perdem aqui
+      if (SIMS[id]) replaceIn(SIMS[id], d); else SIMS[id] = d;
+      (SIMS[id].q || []).forEach((x, i) => { if (!x) return; const o = old[i] || {};
+        const r = o.res !== undefined ? o.res : RES.get(id + ":" + i)?.t; if (r) x.res = r;
+        const t = o.qt !== undefined ? o.qt : QSTM.get(id + ":" + i)?.t; if (qtOk(t)) x.qt = t; });
+    },
     drop(id) { delete SIMS[id]; },
     doc: id => "sim." + segSafe(id)
   },
   res: {
     items() { const out = []; for (const [sid, s] of Object.entries(SIMS)) (s.q || []).forEach((x, i) => { if (x && x.res) out.push([sid + ":" + i, { sim: sid, q: i, t: x.res }]); }); return out; },
-    get(id) { const [sid, i] = resSplit(id); const x = SIMS[sid]?.q?.[i]; return x && x.res ? { sim: sid, q: i, t: x.res } : undefined; },
+    get(id) { const [sid, i] = resSplit(id); if (!SIMS[sid]) return RES.get(id); const x = SIMS[sid].q?.[i]; return x && x.res ? { sim: sid, q: i, t: x.res } : undefined; },
     put(id, d) { RES.set(id, d); const x = SIMS[d.sim]?.q?.[d.q]; if (x) x.res = d.t; },
     drop(id) { RES.delete(id); const [sid, i] = resSplit(id); const x = SIMS[sid]?.q?.[i]; if (x) delete x.res; },
     doc: id => { const [sid, i] = resSplit(id); return "res." + segSafe(sid) + "." + Math.floor(i / 10); }
+  },
+  qst: {
+    items() { const out = []; for (const [sid, s] of Object.entries(SIMS)) (s.q || []).forEach((x, i) => { if (x && x.qt) out.push([sid + ":" + i, { sim: sid, q: i, t: x.qt }]); }); return out; },
+    get(id) { const [sid, i] = resSplit(id); if (!SIMS[sid]) return QSTM.get(id); const x = SIMS[sid].q?.[i]; return x && x.qt ? { sim: sid, q: i, t: x.qt } : undefined; },
+    put(id, d) { QSTM.set(id, d); const [sid, i] = resSplit(id); const x = SIMS[sid]?.q?.[i]; if (x && qtOk(d.t)) x.qt = d.t; },
+    drop(id) { QSTM.delete(id); const [sid, i] = resSplit(id); const x = SIMS[sid]?.q?.[i]; if (x) delete x.qt; },
+    doc: id => { const [sid, i] = resSplit(id); return "qst." + segSafe(sid) + "." + Math.floor(i / 10); }
   }
 };
 function fixItem(kind, d) {
@@ -484,9 +532,10 @@ function diffKind(kind, ids) {
   return n;
 }
 const resIdsFor = sid => { const ids = new Set(); for (const key of KSET.get("res") || []) { const id = splitKey(key)[1]; if (resSplit(id)[0] === sid) ids.add(id); } (SIMS[sid]?.q || []).forEach((x, i) => { if (x && x.res) ids.add(sid + ":" + i); }); return [...ids]; };
+const qstIdsFor = sid => { const ids = new Set(); for (const key of KSET.get("qst") || []) { const id = splitKey(key)[1]; if (resSplit(id)[0] === sid) ids.add(id); } (SIMS[sid]?.q || []).forEach((x, i) => { if (x && x.qt) ids.add(sid + ":" + i); }); return [...ids]; };
 const SEC_KINDS = { tasks: ["task"], sessions: ["ses"], exams: ["exam"], agenda: ["blk"], decks: ["deck"], simfolders: ["fold"], errors: ["err"], trash: ["trash"], settings: ["subj", "kv"], timer: ["kv"], revlog: ["rev"], legacy: ["legacy"] };
 function capSim(x) {
-  (x.q || []).forEach(q => { if (!q) return; if (q.c && q.c.length > 160) q.c = q.c.slice(0, 160); if (q.n && q.n.length > 600) q.n = q.n.slice(0, 600); if (q.res && q.res.length > 9000) q.res = q.res.slice(0, 9000); });
+  (x.q || []).forEach(q => { if (!q) return; if (q.qt !== undefined && !qtOk(q.qt)) delete q.qt; if (q.c && q.c.length > 160) q.c = q.c.slice(0, 160); if (q.n && q.n.length > 600) q.n = q.n.slice(0, 600); if (q.res && q.res.length > 9000) q.res = q.res.slice(0, 9000); });
   if (x.essay) { if (x.essay.fb && x.essay.fb.length > 3000) x.essay.fb = x.essay.fb.slice(0, 3000); if (x.essay.imp && x.essay.imp.length > 3000) x.essay.imp = x.essay.imp.slice(0, 3000); }
 }
 function capCard(c) { if (c.front && c.front.length > 6000) c.front = c.front.slice(0, 6000); if (c.back && c.back.length > 6000) c.back = c.back.slice(0, 6000); fixItem("card", c); }
@@ -500,7 +549,7 @@ function commit(...secs) {
 }
 function commitSim(x) {
   clearTimeout(simSaveT); capSim(x); x.updatedAt = Date.now(); SIMS[x.id] = x;
-  if (diffKind("sim", [x.id]) + diffKind("res", resIdsFor(x.id))) changedLocally();
+  if (diffKind("sim", [x.id]) + diffKind("res", resIdsFor(x.id)) + diffKind("qst", qstIdsFor(x.id))) changedLocally();
 }
 function commitCard(c) { capCard(c); c.updatedAt = Date.now(); CARDS[c.id] = c; if (diffKind("card", [c.id])) changedLocally(); }
 function changedLocally(user = true) { Store.soon(); Cloud.schedule(); Cloud.paint(); if (user) AutoBk.poke(); }
@@ -531,7 +580,7 @@ function applyRemote(doc, body, md) {
     if (m.home !== doc) continue;
     const p = PEND.get(key);
     if (!p) { PEND.set(key, { s: 0, b: r._d ? null : clone(strip(r)) }); Store.pend(key); continue; }
-    if (p.su && ru === p.su) { if (!r._d) p.b = clone(strip(r)); continue; }      // eco de um envio anterior deste aparelho: a base avança
+    if ((p.su && ru === p.su) || (p.sent && p.sent.includes(ru))) { if (!r._d) p.b = clone(strip(r)); continue; }      // eco de um envio deste aparelho: a base avança, nada é desfeito
     if (!r._d && !m.del) {
       const remote = strip(r); const cur = KINDS[kind].get(id);
       if (cur !== undefined && (p.b ? !same(remote, p.b) : !same(remote, cur))) {   // outro aparelho mudou o item depois da base desta edição
@@ -651,7 +700,7 @@ const Store = {
     clearTimeout(this.t); this.t = null;
     for (const key of this.dp) {
       const p = PEND.get(key); const m = IT.get(key);
-      if (p && m) { const [kind, id] = splitKey(key); const d = m.del ? null : (KINDS[kind].get(id) ?? (kind === "res" ? RES.get(id) : undefined)); this.q.set("p:" + key, { u: m.u, del: m.del, home: m.home, d: d === undefined ? null : clone(d), b: p.b || null }); }
+      if (p && m) { const [kind, id] = splitKey(key); const d = m.del ? null : (KINDS[kind].get(id) ?? (kind === "res" ? RES.get(id) : undefined)); this.q.set("p:" + key, { u: m.u, del: m.del, home: m.home, d: d === undefined ? null : clone(d), b: p.b || null, sent: p.sent || null }); }
       else this.q.set("p:" + key, undefined);
     }
     this.dp.clear();
@@ -690,7 +739,7 @@ function restorePend(key, e) {
   if (!m) { IT.set(key, { u: eu, h: "", home: "", del: e.del ? 1 : 0 }); addK(kind, key); } else Object.assign(m, { u: eu, del: e.del ? 1 : 0 });
   const mm = IT.get(key); mm.h = e.del ? "" : dataHash(K.get(id));
   setHome(key, e.home || placeFor(kind, id, e.d));
-  PEND.set(key, { s: 0, b: e.b || null });
+  PEND.set(key, { s: 0, b: e.b || null, sent: Array.isArray(e.sent) ? e.sent.slice(-8) : undefined });
 }
 /* valores padrão (meta diária, cor…) entram com carimbo antigo: qualquer valor salvo na nuvem vence */
 function seedDefaults() {
@@ -751,9 +800,14 @@ const Cloud = {
     clearTimeout(this.relT); this.relT = setTimeout(() => { if (this.db && !this.unsub && !this.off) this.listen(); }, c === "resource_exhausted" ? 30000 : 5000);
   },
   set(st) { this.state = st; this.paint(); },
-  schedule(ms = 700) { clearTimeout(this.t); if (!this.ready || this.off) return; this.t = setTimeout(() => this.flush(), Math.max(ms, this.wait - Date.now())); },
+  schedule(ms = 700) {
+    clearTimeout(this.t); if (!this.ready || this.off) return;
+    const now = Date.now(); if (!this.sched0) this.sched0 = now;
+    const d = Math.min(ms, Math.max(0, this.sched0 + 3000 - now));   // no máximo 3 s depois da primeira mudança, mesmo com o aluno mexendo sem parar
+    this.t = setTimeout(() => { this.sched0 = 0; this.flush(); }, Math.max(d, this.wait - now));
+  },
   async flush() {
-    if (!this.ready || this.off || this.busy || this.migrating) return;
+    if (!this.ready || this.off || this.readonly || this.busy || this.migrating) return;
     if (this.wait > Date.now()) return this.schedule(0);
     const docs = pendingDocs(); if (!docs.length) return this.paint();
     this.busy = true; this.paint();
@@ -783,11 +837,16 @@ const Cloud = {
     const size = (exists ? RSIZE.get(doc) || 0 : 0) - freed + utf8(JSON.stringify(payload));
     if (size > LIM.HARD && relocate(doc, keys, size)) return;
     let ref; try { ref = this.col.doc(doc); } catch (e) { keys.forEach(k => TOOBIG.add(k)); console.warn("bloco inválido", doc, e); return; }
+    for (const k in sentU) { const p = PEND.get(k); if (p) p.sent = [...(p.sent || []).filter(x => x !== sentU[k]), sentU[k]].slice(-8); }   // anotado antes de enviar: a confirmação da nuvem pode chegar antes da resposta
     try {
       if (exists) await withTimeout(ref.update({ i: payload }), 25000);
       else {
         try { await withTimeout(ref.update({ i: payload }), 25000); }
-        catch (e) { if (!e || (e.code !== "invalid_argument" && e.code !== "transform_error")) throw e; await withTimeout(ref.set({ v: 2, i: payload }), 25000); }
+        catch (e) {
+          if (!e || (e.code !== "invalid_argument" && e.code !== "transform_error")) throw e;
+          try { await withTimeout(ref.set({ v: 2, i: payload }), 25000); }
+          catch (e2) { if (e2 && e2.code === "invalid_argument" && !this.lastOk && size < 64 * 1024) { this.readonly = true; this.set("readonly"); return; } throw e2; }   // um bloco pequeno e bem formado recusado: este link não deixa gravar
+        }
       }
       const t = Date.now();
       for (const k in sentU) { const p = PEND.get(k); if (!p) continue; p.su = sentU[k]; if (IT.get(k)?.u === sentU[k]) p.s = t; }
@@ -819,6 +878,7 @@ const Cloud = {
     else if (st === "nologin") txt = "Entre na sua conta Claude para salvar na nuvem · salvo neste aparelho";
     else if (st === "off") { kind = "bad"; txt = "Nuvem indisponível nesta página · salvo neste aparelho"; }
     else if (st === "error") { kind = "bad"; txt = "Não deu para conectar à nuvem · salvo neste aparelho"; }
+    else if (st === "readonly") { kind = "bad"; txt = "Este link não deixa salvar na nuvem · seus dados ficam guardados neste aparelho"; }
     else if (!this.ready) { kind = "busy"; txt = this.t0 && Date.now() - this.t0 > 9500 ? "Nuvem demorando a responder · salvo neste aparelho" : "Conectando à nuvem…"; }
     else if (this.full) { kind = "bad"; txt = `Nuvem cheia · ${n} alteraç${n === 1 ? "ão guardada" : "ões guardadas"} neste aparelho`; }
     else if (this.offline && n) { kind = "bad"; txt = `Sem conexão · ${n} alteraç${n === 1 ? "ão guardada" : "ões guardadas"} aqui, sobem sozinhas`; }
@@ -885,10 +945,10 @@ function remoteChanged() {
 }
 document.addEventListener("focusout", () => { if (rerenderWanted) setTimeout(() => { if (rerenderWanted && !$(".ov") && !typing()) { rerenderWanted = false; render(); } }, 500); });
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") { Store.flush(); Cloud.flush(); }
-  else { pomoCheck(); Cloud.flush(); if (Cloud.ready) touchDevice(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); }
+  if (document.visibilityState === "hidden") { if (simTake) takePause(SIMS[simTake]); Store.flush(); Cloud.flush(); }
+  else { pomoCheck(); if (simTake && route === "simulados" && simOpen === simTake && SIMS[simTake]) { takeResume(SIMS[simTake]); takeClock(); } Cloud.flush(); if (Cloud.ready) touchDevice(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); }
 });
-window.addEventListener("pagehide", () => { Store.flush(); });
+window.addEventListener("pagehide", () => { if (simTake) takePause(SIMS[simTake]); Store.flush(); });
 window.addEventListener("online", () => { Cloud.offline = false; Cloud.wait = 0; Cloud.flush(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); });
 setInterval(() => { if (pendingDocs().length) Cloud.flush(); }, 20000);
 try { Promise.resolve(navigator.storage?.persist?.()).catch(() => {}); } catch {}
@@ -1089,6 +1149,7 @@ function openMore() {
 }
 let lastRouteSeen = null;
 function render() {
+  if (simTake && !(route === "simulados" && simOpen === simTake)) leaveTake();
   if (route !== lastRouteSeen) { if (route === "ia") iaTab = iaTabNext || "gerar"; iaTabNext = null; lastRouteSeen = route; }
   renderNav();
   const v = $("#view");
@@ -1142,7 +1203,7 @@ function paintClock() {
   const td = $("#todayTotal"); if (td) td.textContent = fmtHM(secsOnDay(dkey()));
   document.querySelectorAll("[data-tt]").forEach(el => { const t = S.tasks.find(x => x.id === el.dataset.tt); if (t && t.runStart) el.textContent = fmtClock(taskSec(t)); });
 }
-function tick() { if (!pomoCheck()) paintClock(); }
+function tick() { if (!pomoCheck()) paintClock(); if (simTake) takeClock(); }
 /* som de aviso: o iPad só toca áudio liberado por um toque; o app libera no primeiro toque */
 let AC = null;
 const unlockAudio = () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); } catch {} };
@@ -1248,7 +1309,7 @@ VIEWS.painel = () => {
     <div class="card"><div class="ttl"><h2>Pontos fracos</h2><a class="btn sm ghost" href="#ia">Reforçar com IA</a></div>
       ${weakList(5)}
       ${S.errors.some(e => !e.reviewed) ? `<div class="item" style="margin-top:6px;border-top:1px solid var(--line)"><div class="grow"><div class="lbl">Caderno de erros</div><div class="t">${S.errors.filter(e => !e.reviewed).length} para revisar</div></div><a class="pill" href="#erros">Abrir</a></div>` : ""}
-      ${lastSim ? `<div class="item" style="margin-top:6px;border-top:1px solid var(--line)"><div class="grow"><div class="lbl">Último simulado</div><div class="t">${esc(lastSim.name)}</div></div><a class="pill" href="#simulados" data-opensim="${lastSim.id}" style="color:${pctColor(simStats(lastSim).pct * 100)}">${Math.round(simStats(lastSim).pct * 100)}%</a></div>` : ""}</div>
+      ${lastSim ? `<div class="item" style="margin-top:6px;border-top:1px solid var(--line)"><div class="grow"><div class="lbl">Último simulado</div><div class="t">${esc(lastSim.name)}</div></div>${(() => { const st = simStats(lastSim); const todo = lastSim.gen && !takeDone(lastSim); return `<a class="pill" href="#simulados" data-opensim="${lastSim.id}" style="color:${!todo && st.any ? pctColor(st.pct * 100) : "var(--muted)"}">${todo ? "fazer a prova" : st.any ? Math.round(st.pct * 100) + "%" : "a corrigir"}</a>`; })()}</div>` : ""}</div>
   </div>`;
 };
 BIND.painel = v => {
@@ -1688,12 +1749,12 @@ async function pdfExtract(data, maxImgPages = 6) {
   if (scanned) for (let i = 1; i <= Math.min(pdf.numPages, maxImgPages); i++) { const p = await pdf.getPage(i); const vp = p.getViewport({ scale: 1.6 }); const cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height; await p.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise; pages.push(await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85))); }
   return { text: txt.slice(0, 160000), pages, numPages: pdf.numPages, scanned, truncated: pdf.numPages > max };
 }
-async function readPdf(file, a) {
+async function readPdf(file, a, after) {
   try {
     const r = await pdfExtract(file); a.text = r.text.slice(0, 120000); a.pages = r.pages; a.numPages = r.numPages;
     a.status = r.scanned ? `${r.numPages} pág. · digitalizado, enviado como imagem` : `${r.numPages} pág. · texto extraído${r.truncated ? " (60 primeiras)" : ""}`;
   } catch (e) { console.warn(e); a.status = "não foi possível ler"; a.failed = true; }
-  renderAtt();
+  (after || renderAtt)();
 }
 function renderAtt() {
   const el = $("#thumbs"); if (!el) return;
@@ -1847,37 +1908,43 @@ function parseRanges(txt, qn) {
   return out;
 }
 function simStats(s) {
-  const q = s.q || []; let a = 0, ag = 0, e = 0, b = 0, nc = 0, g = 0; const bySub = {};
+  const q = s.q || []; let a = 0, ag = 0, e = 0, b = 0, nc = 0, g = 0, an = 0; const bySub = {};
   q.forEach(x => {
+    if (x.an) { an++; return; }
     const k = x.s || "Sem disciplina"; const o = bySub[k] = bySub[k] || { a: 0, e: 0, b: 0, g: 0, n: 0 }; o.n++;
     if (x.g) { g++; o.g++; }
     if (x.r === "c") { a++; o.a++; if (x.g) ag++; } else if (x.r === "e") { e++; o.e++; } else if (x.r === "b") { b++; o.b++; } else nc++;
   });
   const filled = a + e + b > 0;
   let manual = false;
-  if (!filled && s.manual != null && s.manual !== "") { a = Math.min(s.qn, +s.manual || 0); e = s.qn - a; nc = 0; manual = true; }
-  return { a, ag, consc: a - ag, e, b, nc, g, bySub, pct: s.qn ? a / s.qn : 0, filled, manual, any: filled || manual };
+  const qn = Math.max(0, (s.qn || 0) - an);
+  if (!filled && s.manual != null && s.manual !== "") { a = Math.min(qn, +s.manual || 0); e = qn - a; nc = 0; manual = true; }
+  return { a, ag, consc: a - ag, e, b, nc, g, bySub, pct: qn ? a / qn : 0, filled, manual, any: filled || manual, qn, an };
 }
 function simSubjects(s) { const fd = S.simfolders.find(f => f.id === s.folder); return [...new Set([...(fd?.subjects || []), ...subjects().map(x => x.name), ...(s.q || []).map(x => x.s).filter(Boolean)])]; }
 
 VIEWS.simulados = () => {
-  if (simOpen && SIMS[simOpen] && !SIMS[simOpen].deleted) return simView(SIMS[simOpen]);
-  simOpen = null;
+  if (simOpen && SIMS[simOpen] && !SIMS[simOpen].deleted) { const s = SIMS[simOpen]; if (s.gen && !takeDone(s)) return simTake === s.id ? takeView(s) : genSimView(s); return simView(s); }
+  simOpen = null; simTake = null;
+  if (simGen) return genView();
   const fd = S.simfolders.find(f => f.id === simFolder); if (fd) return folderView(fd);
   simFolder = null; return foldersView();
 };
 BIND.simulados = v => {
   bindCommon(v);
-  if (simOpen) return bindSim(v, SIMS[simOpen]);
+  if (simOpen) { const s = SIMS[simOpen]; if (s.gen && !takeDone(s)) return simTake === s.id ? bindTake(v, s) : bindGenSim(v, s); return bindSim(v, s); }
+  if (simGen) return bindGenForm(v);
   if (simFolder) return bindFolder(v, S.simfolders.find(f => f.id === simFolder));
   v.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => editFolder(null, b.dataset.preset));
   const nf = $("#newFolder"); if (nf) nf.onclick = () => editFolder(null, "outra");
+  const gn = $("#genNew"); if (gn) gn.onclick = () => openGen("");
   v.querySelectorAll("[data-folder]").forEach(c => c.onclick = e => { if (e.target.closest("button[data-x]")) return; simFolder = c.dataset.folder; render(); window.scrollTo(0, 0); });
 };
 function foldersView() {
   const fs = S.simfolders;
   return `<div class="head"><div><h1>Simulados</h1><p>Uma pasta para cada vestibular. Registre acertos, erros, chutes, tempo de prova e o conteúdo de cada questão. A IA aponta o que estudar.</p></div>
   ${fs.length ? `<button class="btn pri" id="newFolder">${ico("plus")}Nova pasta</button>` : ""}</div>
+  <div class="card genhero"><div class="grow"><h2>${ico("ia")}Simulado inédito com IA</h2><p class="sub" style="margin:4px 0 0">Questões novas no estilo do ENEM, Fuvest, Unicamp e outras, no nível que você escolher. Dá para anexar provas antigas para a IA se basear. Você faz a prova aqui, com cronômetro e correção automática, ou imprime.</p></div><button class="btn pri" id="genNew">Criar simulado inédito</button></div>
   ${fs.length ? `<div class="grid g3">${fs.map(f => { const ss = folderSims(f.id); const ps = ss.map(s => simStats(s)).filter(x => x.any).map(x => Math.round(x.pct * 100)); const avg = ps.length ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : null;
     return `<div class="card folder" data-folder="${f.id}" tabindex="0" role="button"><div class="ttl" style="margin:0"><h2>${esc(f.name)}</h2><span class="pill">${ss.length} simulado${ss.length !== 1 ? "s" : ""}</span></div>
     <div class="sub">${f.qn} questões · ${fmtHM(f.dur * 60)} de prova</div>
@@ -1913,33 +1980,34 @@ function perfChart(list, o = {}) {
 function folderView(fd) {
   const ss = folderSims(fd.id);
   return `<div class="head"><div><button class="btn sm ghost" id="back">← Pastas</button><h1 style="margin-top:8px">${esc(fd.name)}</h1><p>${ss.length} simulados · ${fd.qn} questões · ${fmtHM(fd.dur * 60)} de prova</p></div>
-  <div class="row"><button class="btn" id="editF">Editar pasta</button><button class="btn pri" id="newSim">${ico("plus")}Novo simulado</button></div></div>
+  <div class="row"><button class="btn" id="editF">Editar pasta</button><button class="btn" id="genHere">${ico("ia")}Simulado inédito</button><button class="btn pri" id="newSim">${ico("plus")}Novo simulado</button></div></div>
   <div class="card"><div class="ttl"><h2>Gráfico de desempenho</h2><span class="sub">porcentagem de acertos de cada simulado</span></div>${perfChart(ss, { empty: "Crie o primeiro simulado desta pasta." })}</div>
   ${essaySection(ss)}
   <div class="card"><h2>Simulados</h2>${ss.length ? `<div class="list">${ss.map((s, i) => { const st = simStats(s); const p = Math.round(st.pct * 100);
     return `<div class="item click" data-sim="${s.id}" tabindex="0" role="button"><b class="mono" style="min-width:30px">${i + 1}º</b><div class="grow"><div class="t">${esc(s.name)}</div><div class="sub">${s.date ? fmtDate(s.date) : ""} · ${fmtHM((s.dur || 0) * 60)} de prova${st.g ? ` · ${st.g} chutes` : ""}</div></div>
-    ${s.analysis ? `<span class="pill">${ico("ia")}levantamento</span>` : ""}${essayPct(s) != null ? `<span class="pill">redação ${fmtNum(s.essay.score)}</span>` : ""}${st.any ? `<span class="pill mono">${st.a}/${s.qn}</span><span class="pill" style="color:${pctColor(p)}">${p}%</span>` : `<span class="pill">a corrigir</span>`}</div>`; }).join("")}</div>` : `<div class="empty">Nenhum simulado nesta pasta.</div>`}</div>`;
+    ${s.analysis ? `<span class="pill">${ico("ia")}levantamento</span>` : ""}${s.gen ? `<span class="pill">${ico("ia")}inédito</span>` : ""}${essayPct(s) != null ? `<span class="pill">redação ${fmtNum(s.essay.score)}</span>` : ""}${s.gen && !takeDone(s) ? `<span class="pill">${{ gerando: "criando…", incompleto: "incompleto", pronto: "a fazer" }[genStatus(s)]}</span>` : st.any ? `<span class="pill mono">${st.a}/${st.qn}</span><span class="pill" style="color:${pctColor(p)}">${p}%</span>` : `<span class="pill">a corrigir</span>`}</div>`; }).join("")}</div>` : `<div class="empty">Nenhum simulado nesta pasta.</div>`}</div>`;
 }
 function bindFolder(v, fd) {
   $("#back").onclick = () => { simFolder = null; render(); };
   $("#editF").onclick = () => editFolder(fd);
   $("#newSim").onclick = () => editSim(fd, null);
+  $("#genHere").onclick = () => openGen(fd.id);
   v.querySelectorAll("[data-sim]").forEach(r => { const open = () => { simOpen = r.dataset.sim; render(); window.scrollTo(0, 0); }; r.onclick = open; r.onkeydown = e => { if (e.key === "Enter") open(); }; });
 }
 function editSim(fd, s) {
-  const isNew = !s; const n = folderSims(fd.id).length + 1; const dur = s ? s.dur : fd.dur;
+  const isNew = !s; const n = folderSims(fd.id).length + 1; const dur = s ? s.dur : fd.dur; const lockQ = !!(s && s.gen); const planned = lockQ && !takeDone(s);
   modal(`<h2>${isNew ? "Novo simulado" : "Editar simulado"}</h2>
   <label class="field"><span>Nome</span><input type="text" id="smName" value="${esc(s ? s.name : `${n}º Simulado ${fd.name}`)}"></label>
   <div class="row"><label class="field"><span>Data</span><input type="date" id="smDate" value="${esc(s ? s.date : dkey())}"></label>
-  <label class="field"><span>Nº de questões</span><input type="number" id="smQn" min="1" max="250" value="${s ? s.qn : fd.qn}"></label></div>
-  <div class="row"><label class="field"><span>Tempo que você levou (h)</span><input type="number" id="smH" min="0" max="12" value="${Math.floor(dur / 60)}"></label><label class="field"><span>(min)</span><input type="number" id="smM" min="0" max="59" value="${dur % 60}"></label></div>
+  <label class="field"><span>Nº de questões</span><input type="number" id="smQn" min="1" max="250" value="${s ? s.qn : fd.qn}" ${lockQ ? "disabled" : ""}></label></div>
+  <div class="row"><label class="field"><span>${planned ? "Tempo de prova (h)" : "Tempo que você levou (h)"}</span><input type="number" id="smH" min="0" max="12" value="${Math.floor(dur / 60)}"></label><label class="field"><span>(min)</span><input type="number" id="smM" min="0" max="59" value="${dur % 60}"></label></div>
   <div class="row end"><button class="btn ghost" data-x>Cancelar</button><button class="btn pri" data-ok>${isNew ? "Criar e corrigir" : "Salvar"}</button></div>`, (m, close) => {
     m.querySelector("[data-x]").onclick = close;
     m.querySelector("[data-ok]").onclick = () => {
-      const qn = Math.max(1, Math.min(250, +m.querySelector("#smQn").value || fd.qn));
+      const qn = lockQ ? s.qn : Math.max(1, Math.min(250, +m.querySelector("#smQn").value || fd.qn));
       const data = { name: m.querySelector("#smName").value.trim() || `${n}º Simulado`, date: m.querySelector("#smDate").value || dkey(), qn, dur: (+m.querySelector("#smH").value || 0) * 60 + (+m.querySelector("#smM").value || 0) };
       if (isNew) { const rs = parseRanges(fd.ranges, qn); s = { id: uid(), folder: fd.id, ...data, q: rs.map(x => ({ s: x, r: "", g: false, c: "", n: "" })), manual: null, files: [], analysis: null, createdAt: Date.now() }; simOpen = s.id; }
-      else { Object.assign(s, data); while (s.q.length < qn) s.q.push({ s: "", r: "", g: false, c: "", n: "" }); s.q.length = qn; }
+      else { Object.assign(s, data); if (planned) s.gen.dur = data.dur; while (s.q.length < qn) s.q.push({ s: "", r: "", g: false, c: "", n: "" }); s.q.length = qn; }
       commitSim(s); close(); render();
     };
   });
@@ -1951,30 +2019,32 @@ function simView(s) {
   const show = (x) => simFilter === "todas" || (simFilter === "erros" ? (x.r === "e" || x.g || x.r === "b") : !x.r);
   const subRows = Object.entries(st.bySub).filter(([, o]) => o.a + o.e + o.b > 0).sort((a, b) => a[1].a / a[1].n - b[1].a / b[1].n);
   return `<div class="head"><div><button class="btn sm ghost" id="back">← ${esc(fd.name)}</button><h1 style="margin-top:8px">${esc(s.name)}</h1><p>${s.date ? parseDay(s.date).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" }) : ""} · ${s.qn} questões · ${fmtHM((s.dur || 0) * 60)} de prova</p></div>
-  <div class="row"><button class="btn" id="editS">Editar dados</button><button class="btn ghost danger" id="delS">Excluir</button></div></div>
+  <div class="row">${s.gen ? `<button class="btn" id="genPrint">Baixar para imprimir</button>` : ""}<button class="btn" id="editS">Editar dados</button><button class="btn ghost danger" id="delS">Excluir</button></div></div>
+  ${s.gen ? `<p class="sub" style="margin:-6px 0 12px">Simulado inédito · ${esc(s.gen.name)} · ${genLevel(s.gen.level)[1]}${st.an ? ` · ${st.an} anulada${st.an > 1 ? "s" : ""}` : ""}. Toque no número de uma questão para ver o enunciado, a resolução e o gabarito.</p>` : ""}
   <div class="grid g4">
-    <div class="card"><div class="lbl">Acertos</div><div class="big" style="color:var(--ok)">${st.a}</div><div class="sub">${st.manual ? "total informado" : `${st.consc} conscientes · ${st.ag} no chute`}</div></div>
+    <div class="card"><div class="lbl">Acertos</div><div class="big" style="color:var(--ok)">${st.a}${s.gen ? `<small class="sub" style="font-size:.9rem"> de ${st.qn}</small>` : ""}</div><div class="sub">${st.manual ? "total informado" : `${st.consc} conscientes · ${st.ag} no chute`}</div></div>
     <div class="card"><div class="lbl">Erros</div><div class="big" style="color:var(--bad)">${st.e}</div><div class="sub">${st.b} em branco${st.nc && !st.manual ? ` · ${st.nc} sem correção` : ""}</div></div>
     <div class="card"><div class="lbl">Desempenho</div><div class="big" style="color:${pctColor(p)}">${p}%</div><div class="bar" style="margin-top:8px"><div style="width:${p}%;background:${pctColor(p)}"></div></div></div>
-    <div class="card"><div class="lbl">Tempo de prova</div><div class="big">${fmtHM((s.dur || 0) * 60)}</div><div class="sub">${s.dur ? `${(s.dur / s.qn).toFixed(1).replace(".", ",")} min por questão` : "informe em Editar dados"}</div></div>
+    <div class="card"><div class="lbl">Tempo de prova</div><div class="big">${fmtHM((s.dur || 0) * 60)}</div><div class="sub">${s.dur ? `${(s.dur / s.qn).toFixed(1).replace(".", ",")} min por questão${s.gen && s.gen.dur ? ` · ${fmtHM(s.gen.dur * 60)} previstos` : ""}` : "informe em Editar dados"}</div></div>
   </div>
-  ${!st.filled ? `<div class="note"><div class="row"><span>Só quer registrar o total? Acertos:</span><input type="number" id="simManual" min="0" max="${s.qn}" value="${s.manual ?? ""}" style="width:90px"><span class="sub">de ${s.qn}. Para ver disciplinas, chutes e conteúdos, corrija questão por questão abaixo.</span></div></div>` : ""}
-  <div class="grid g2">
-    <div class="card"><div class="ttl"><h2>Arquivos do simulado</h2></div><div class="list">${FILEKINDS.map(([k, l]) => { const f = (s.files || []).find(x => x.kind === k);
+  ${!st.filled && !s.gen ? `<div class="note"><div class="row"><span>Só quer registrar o total? Acertos:</span><input type="number" id="simManual" min="0" max="${s.qn}" value="${s.manual ?? ""}" style="width:90px"><span class="sub">de ${s.qn}. Para ver disciplinas, chutes e conteúdos, corrija questão por questão abaixo.</span></div></div>` : ""}
+  <div class="grid ${s.gen ? "" : "g2"}">
+    ${s.gen ? "" : `<div class="card"><div class="ttl"><h2>Arquivos do simulado</h2></div><div class="list">${FILEKINDS.map(([k, l]) => { const f = (s.files || []).find(x => x.kind === k);
       return `<div class="item"><div class="grow"><b>${l}</b><div class="sub t">${f ? esc(f.name) + (f.size ? " · " + fmtSize(f.size) : "") : "não anexado"}</div></div>${f ? `<a class="btn sm" href="/_blob/${esc(f.id)}" target="_blank" rel="noopener">Abrir</a><button class="icon-btn" data-frm="${k}" aria-label="Remover ${l}">${ico("trash")}</button>` : `<button class="btn sm" data-fup="${k}">Anexar</button>`}</div>`; }).join("")}</div>
-      <input type="file" id="simFile" accept="application/pdf,.pdf,image/*" hidden><p class="sub" id="fileNote" style="margin:8px 0 0">PDF ou foto. A IA lê esses arquivos no levantamento e nas resoluções.</p></div>
+      <input type="file" id="simFile" accept="application/pdf,.pdf,image/*" hidden><p class="sub" id="fileNote" style="margin:8px 0 0">PDF ou foto. A IA lê esses arquivos no levantamento e nas resoluções.</p></div>`}
     <div class="card"><div class="ttl"><h2>Por disciplina</h2></div>${subRows.length ? subRows.map(([n, o]) => { const pp = Math.round(o.a / o.n * 100); return `<div class="hbar"><span class="n" title="${esc(n)}">${esc(n)}</span><div class="bar"><div style="width:${pp}%;background:${pctColor(pp)}"></div></div><span class="v">${o.a}/${o.n} · ${pp}%</span></div>`; }).join("") : `<div class="empty">Corrija as questões e defina as disciplinas para ver acertos e erros por matéria.</div>`}</div>
   </div>
   ${essayCard(s)}
+  ${s.essayPrompt ? `<details class="card"><summary style="cursor:pointer;font-weight:600">Proposta de redação deste simulado</summary>${essayPromptHTML(s.essayPrompt, true)}</details>` : ""}
   ${analysisCard(s)}
   <div class="card"><div class="ttl"><h2>Questões</h2><div class="row"><div class="tabs" id="qf">${[["todas", "Todas"], ["erros", "Erros e chutes"], ["sem", "Sem correção"]].map(([k, l]) => `<button data-f="${k}" class="${simFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
-    <button class="btn sm" id="qDist">Distribuir disciplinas</button><button class="btn sm" id="qKey">Corrigir pelo gabarito</button><button class="btn sm" id="qErr">Enviar ao caderno de erros</button></div></div>
+    ${s.gen ? "" : `<button class="btn sm" id="qDist">Distribuir disciplinas</button><button class="btn sm" id="qKey">Corrigir pelo gabarito</button>`}<button class="btn sm" id="qErr">Enviar ao caderno de erros</button></div></div>
     <div class="row" style="gap:16px;margin-bottom:6px"><span><span class="lbl">Questões chute</span> <b class="mono">${chutes.join(", ") || "—"}</b></span><span><span class="lbl">Questões erradas</span> <b class="mono" style="color:var(--bad)">${erros.join(", ") || "—"}</b></span></div>
     <p class="sub" style="margin:0 0 8px">✓ acertou · ✗ errou · – em branco. Marque <b>chute</b> quando respondeu sem certeza (conta como acerto no chute se você acertou). Em <b>Conteúdo</b> anote o assunto da questão; o botão <b>IA</b> pede uma resolução caprichada.</p>
     <div class="qhead"><span>Nº</span><span>Disciplina</span><span>Correção</span><span>Chute</span><span>Conteúdo</span><span>Aux. prof. / anotação</span><span></span></div>
     <div id="qlist">${s.q.map((x, i) => show(x) ? qrow(x, i, subjList) : "").join("") || `<div class="empty">Nenhuma questão neste filtro.</div>`}</div></div>`;
 }
-const qrow = (x, i, subjList) => `<div class="qrow ${x.r === "e" ? "is-e" : ""}" data-q="${i}"><span class="qn mono" title="${x.m || x.k ? `Marcada: ${x.m || "–"} · Gabarito: ${x.k || "?"}` : ""}">${pad(i + 1)}${x.k ? `<small>${esc(x.m || "–")}/${esc(x.k)}</small>` : ""}</span>
+const qrow = (x, i, subjList) => `<div class="qrow ${x.r === "e" ? "is-e" : ""} ${x.an ? "an" : ""}" data-q="${i}">${x.qt ? `<button class="qn mono qnb" data-qv title="Ver a questão ${i + 1}${x.an ? " (anulada)" : ""}" aria-label="Ver a questão ${i + 1}">` : `<span class="qn mono" title="${x.m || x.k ? `Marcada: ${x.m || "–"} · Gabarito: ${x.k || "?"}` : ""}">`}${pad(i + 1)}${x.k ? `<small>${esc(x.m || "–")}/${esc(x.k)}</small>` : ""}${x.qt ? "</button>" : "</span>"}
   <select data-f="s" aria-label="Disciplina da questão ${i + 1}"><option value="">—</option>${subjList.map(n => `<option ${n === x.s ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
   <div class="seg" role="group" aria-label="Correção da questão ${i + 1}">${[["c", "✓", "Acertou"], ["e", "✗", "Errou"], ["b", "–", "Em branco"]].map(([r, sym, l]) => `<button data-r="${r}" class="${x.r === r ? "on r-" + r : ""}" title="${l}" aria-label="${l}" aria-pressed="${x.r === r}">${sym}</button>`).join("")}</div>
   <label class="gch"><input type="checkbox" data-f="g" ${x.g ? "checked" : ""}> chute</label>
@@ -1998,8 +2068,9 @@ function bindSim(v, s) {
   $("#delS").onclick = () => confirmBox(`Excluir "${s.name}"?`, "Excluir", () => { const e = trashAdd("sim", s.name, { id: s.id }); s.deleted = true; commitSim(s); simOpen = null; render(); afterDelete("Simulado excluído", e); });
   const man = $("#simManual"); if (man) man.onchange = () => { s.manual = man.value === "" ? null : Math.max(0, Math.min(s.qn, +man.value)); commitSim(s); render(); };
   v.querySelectorAll("#qf button").forEach(b => b.onclick = () => { simFilter = b.dataset.f; render(); });
-  $("#qDist").onclick = () => distSubjects(s);
-  $("#qKey").onclick = () => keyCorrect(s);
+  const qd = $("#qDist"); if (qd) qd.onclick = () => distSubjects(s);
+  const qk = $("#qKey"); if (qk) qk.onclick = () => keyCorrect(s);
+  const gp = $("#genPrint"); if (gp) gp.onclick = () => simDownload(s);
   $("#qErr").onclick = () => errImportModal(s.id);
   const ee = $("#essayEdit"); if (ee) ee.onclick = () => editEssay(s);
   const ai = $("#simAI"); if (ai) ai.onclick = () => simAnalyze(s);
@@ -2013,7 +2084,7 @@ function bindSim(v, s) {
   // files
   const fi = $("#simFile"); let kind = null;
   v.querySelectorAll("[data-fup]").forEach(b => b.onclick = () => { kind = b.dataset.fup; fi.click(); });
-  fi.onchange = async () => { const f = fi.files[0]; fi.value = ""; if (!f) return; await uploadSimFile(s, kind, f); };
+  if (fi) fi.onchange = async () => { const f = fi.files[0]; fi.value = ""; if (!f) return; await uploadSimFile(s, kind, f); };
   v.querySelectorAll("[data-frm]").forEach(b => b.onclick = () => confirmBox("Remover este arquivo do simulado?", "Remover", async () => {
     const f = s.files.find(x => x.kind === b.dataset.frm); s.files = s.files.filter(x => x !== f); commitSim(s); render();
     try { const A = await getAssets(); if (A && f) await A.delete(f.id); } catch {}
@@ -2026,6 +2097,7 @@ function bindSim(v, s) {
     row.querySelector("[data-f=g]").onchange = e => { x.g = e.target.checked; commitSim(s); render(); };
     row.querySelectorAll("input[type=text]").forEach(inp => inp.oninput = () => { x[inp.dataset.f] = inp.value; commitSimSoon(s); });
     row.querySelector("[data-ai]").onclick = () => resolveQuestion(s, +row.dataset.q);
+    const qv = row.querySelector("[data-qv]"); if (qv) qv.onclick = () => questionModal(s, +row.dataset.q);
   });
 }
 async function getAssets() { try { return window.claude?.use ? await window.claude.use("assets") : null; } catch { return null; } }
@@ -2103,9 +2175,9 @@ async function simAnalyze(s) {
   const st = simStats(s); if (!st.filled) return toast("Corrija ao menos algumas questões antes do levantamento");
   simBusy = s.id; simAbort = new AbortController(); render();
   try {
-    const mat = await simMaterial(s);
+    const mat = s.gen ? genMaterial(s) : await simMaterial(s);
     const maxImg = AIcaps?.images?.maxCount || 0; const imgs = await fitImages(mat.imgs.slice(0, maxImg));
-    const qs = s.q.map((x, i) => ({ n: i + 1, ...x })).filter(x => x.r === "e" || x.g || x.r === "b");
+    const qs = s.q.map((x, i) => ({ n: i + 1, ...x })).filter(x => !x.an && (x.r === "e" || x.g || x.r === "b"));
     const fd = S.simfolders.find(f => f.id === s.folder);
     const prompt = `Você é um professor coordenador de cursinho pré-vestibular, especialista em ${fd?.name || "vestibulares"}. Analise o simulado de um aluno e faça o levantamento do que ele precisa estudar. Escreva em português do Brasil.
 Simulado: ${s.name} (${fd?.name || ""}), ${s.qn} questões, tempo de prova ${s.dur} min.
@@ -2138,8 +2210,8 @@ function resolveQuestion(s, i) {
   const x = s.q[i]; let photos = []; let ctrl = null; let text = x.res || "";
   modal(`<h2>Questão ${i + 1}${x.s ? " · " + esc(x.s) : ""}</h2>
   <p class="sub" style="margin:0">${x.r === "c" ? "Você acertou" : x.r === "e" ? "Você errou" : x.r === "b" ? "Deixou em branco" : "Sem correção"}${x.g ? " (chute)" : ""}${x.m ? ` · marcou ${esc(x.m)}` : ""}${x.k ? ` · gabarito ${esc(x.k)}` : ""}${x.c ? ` · ${esc(x.c)}` : ""}</p>
-  <p class="sub" style="margin:0">A IA procura a questão na prova e no gabarito anexados. Se a prova não estiver anexada ou for digitalizada, anexe uma foto da questão.</p>
-  <div class="row"><button class="btn sm" id="rPhoto">Anexar foto da questão</button><span class="sub" id="rPh"></span><input type="file" id="rFile" accept="image/*" multiple hidden></div>
+  <p class="sub" style="margin:0">${x.qt ? "A IA já tem o enunciado, as alternativas e o gabarito desta questão." : "A IA procura a questão na prova e no gabarito anexados. Se a prova não estiver anexada ou for digitalizada, anexe uma foto da questão."}</p>
+  <div class="row" ${x.qt ? "hidden" : ""}><button class="btn sm" id="rPhoto">Anexar foto da questão</button><span class="sub" id="rPh"></span><input type="file" id="rFile" accept="image/*" multiple hidden></div>
   <label class="field"><span>Sua dúvida (opcional)</span><input type="text" id="rQ" placeholder="Ex.: por que a alternativa C está errada?"></label>
   <div class="note" id="rOut" style="white-space:pre-wrap;max-height:45vh;overflow:auto" ${text ? "" : "hidden"}>${esc(text)}</div>
   <div class="row end"><button class="btn ghost" data-x>Fechar</button><button class="btn" id="rSave" ${text && text !== x.res ? "" : "hidden"}>Guardar no simulado</button><button class="btn pri" id="rGo">${text ? "Pedir de novo" : "Pedir resolução caprichada"}</button></div>`, (m, close) => {
@@ -2153,7 +2225,7 @@ function resolveQuestion(s, i) {
       const ai = await getAI(); if (!ai) return toast("Abra o Memora no Claude para usar a IA");
       goB.disabled = true; out.hidden = false; out.textContent = "Lendo a prova…";
       try {
-        const mat = await simMaterial(s, 120000);
+        const mat = x.qt ? { text: genQText(s, i), imgs: [] } : await simMaterial(s, 120000);
         const maxImg = AIcaps?.images?.maxCount || 0;
         const imgs = await fitImages([...photos, ...(photos.length ? [] : mat.imgs)].slice(0, maxImg));
         if (photos.length && !maxImg) { out.textContent = AIERR.images_unavailable; goB.disabled = false; return; }
@@ -2172,6 +2244,482 @@ Se não encontrar a questão no material nem nas fotos, diga isso em uma frase e
       goB.disabled = false;
     };
   });
+}
+
+/* ============ simulados inéditos criados pela IA ============ */
+const GEN_MODELS = {
+  enem: { label: "ENEM", name: "ENEM", alts: 5, minPerQ: 3, essay: true, areas: [["Linguagens e Códigos", 45], ["Ciências Humanas", 45], ["Ciências da Natureza", 45], ["Matemática", 45]], desc: "Questões longas e contextualizadas, com textos-base, dados e situações do cotidiano; cobra leitura, interpretação e as competências da Matriz de Referência do INEP; 5 alternativas (A a E)." },
+  fuvest: { label: "Fuvest (1ª fase)", name: "Fuvest", alts: 5, minPerQ: 3.3, essay: false, areas: [["Português e Literatura", 13], ["Matemática", 11], ["Física", 11], ["Química", 11], ["Biologia", 11], ["História", 11], ["Geografia", 11], ["Inglês", 6], ["Filosofia e interdisciplinares", 5]], desc: "Questões mais conteudistas e diretas que as do ENEM, com exigência de domínio conceitual, cálculos e leitura das obras literárias obrigatórias; 5 alternativas (A a E)." },
+  unicamp: { label: "Unicamp (1ª fase)", name: "Unicamp", alts: 4, minPerQ: 4.2, essay: false, areas: [["Português e Literatura", 12], ["Matemática", 9], ["Física", 7], ["Química", 7], ["Biologia", 7], ["História", 7], ["Geografia", 7], ["Inglês", 7], ["Filosofia e Sociologia", 5], ["Interdisciplinares", 4]], desc: "Questões contextualizadas e interdisciplinares, com textos, charges e dados, que pedem raciocínio além da memorização; 4 alternativas (A a D)." },
+  unesp: { label: "Unesp (1ª fase)", name: "Unesp", alts: 5, minPerQ: 3, essay: false, areas: [["Linguagens e Códigos", 30], ["Ciências Humanas", 30], ["Ciências da Natureza e Matemática", 30]], desc: "Questões objetivas divididas em três áreas, com cobranças diretas e contextualizadas; 5 alternativas (A a E)." },
+  uerj: { label: "UERJ (Exame de Qualificação)", name: "UERJ", alts: 4, minPerQ: 4, essay: false, areas: [["Linguagens", 15], ["Matemática", 10], ["Ciências da Natureza", 20], ["Ciências Humanas", 15]], desc: "Questões com textos-base, gráficos e forte contextualização; 4 alternativas (A a D)." },
+  famerp: { label: "FAMERP (Medicina)", name: "FAMERP", alts: 5, minPerQ: 3.3, essay: false, areas: [["Português", 10], ["Inglês", 5], ["Matemática", 10], ["Física", 10], ["Química", 10], ["Biologia", 15], ["História", 10], ["Geografia", 10]], desc: "Conhecimentos gerais em nível alto de exigência, com destaque para Biologia e Química; 5 alternativas (A a E)." },
+  outra: { label: "Outra prova (descrever)", name: "", alts: 5, minPerQ: 3, essay: false, areas: [["Português", 10], ["Matemática", 10], ["Física", 6], ["Química", 6], ["Biologia", 8], ["História", 6], ["Geografia", 6], ["Inglês", 4], ["Filosofia e Sociologia", 4]], desc: "" }
+};
+const GEN_LEVELS = [
+  ["real", "Igual à prova real", "misture fáceis, médias e difíceis como na prova real (cerca de 30% fáceis, 45% médias e 25% difíceis)"],
+  ["facil", "Fácil", "questões de nível básico a intermediário, boas para revisar e ganhar confiança"],
+  ["medio", "Médio", "questões de nível intermediário, com uma ou duas etapas de raciocínio"],
+  ["dificil", "Difícil", "questões difíceis, com várias etapas de raciocínio, detalhes conceituais e distratores muito plausíveis"],
+  ["medicina", "Muito difícil (nível Medicina)", "nível das provas mais concorridas de Medicina: questões muito exigentes, cálculos em várias etapas, detalhes finos de conteúdo e pegadinhas sofisticadas"]
+];
+const genLevel = k => GEN_LEVELS.find(l => l[0] === k) || GEN_LEVELS[0];
+const LETTERS = "ABCDE", GEN_BATCH = 6, TAKE_STALE = 15 * 60000;
+let simGen = null;      // formulário aberto: {cfg}
+let GENATT = [];        // provas antigas anexadas ao formulário
+let GENRUN = null;      // criação em andamento neste aparelho: {sim, phase, done, total, ctl}
+let simTake = null, takeIdx = 0, takeMode = "q", takeWarned = null, takeRunning = null;
+const genTotal = c => c.areas.reduce((x, [, n]) => x + Math.max(0, Math.min(90, Math.round(+n || 0))), 0);
+function softRender() { if ($(".ov") || typing()) { rerenderWanted = true; renderNav(); } else render(); }
+function genRender() { if (route === "simulados") softRender(); else renderNav(); }   // não atrapalha quem está em outra tela
+function genCfg(model, folder, keep) {
+  const M = GEN_MODELS[model] || GEN_MODELS.outra;
+  const c = { model, name: M.name, custom: "", alts: M.alts, areas: M.areas.map(([a, n]) => [a, n]), level: "real", focus: "", essay: M.essay, tier: "default", dur: 0, folder: folder || "" };
+  c.dur = Math.max(10, Math.round(genTotal(c) * M.minPerQ));
+  return Object.assign(c, keep || {});
+}
+function genScale(c, mode) {
+  const M = GEN_MODELS[c.model] || GEN_MODELS.outra; const base = M.areas;
+  const full = base.reduce((x, [, n]) => x + n, 0);
+  const target = mode === "full" ? full : mode === "half" ? Math.round(full / 2) : Math.min(full, +mode);
+  const raw = base.map(([, n]) => n * target / full); const fl = raw.map(Math.floor); let left = target - fl.reduce((x, y) => x + y, 0);
+  raw.map((r, i) => [r - fl[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { fl[i]++; left--; } });
+  c.areas = base.map(([a], i) => [a, fl[i]]);
+  c.dur = Math.max(10, Math.round(genTotal(c) * M.minPerQ));
+}
+function guessModel(name) { const n = hnorm(name); return Object.keys(GEN_MODELS).find(k => k !== "outra" && n.includes(hnorm(GEN_MODELS[k].name))) || "outra"; }
+function openGen(folder) {
+  const fd = S.simfolders.find(f => f.id === folder);
+  const model = fd ? guessModel(fd.name) : "enem";
+  if (!simGen) simGen = { cfg: genCfg(model, fd ? fd.id : "", model === "outra" && fd ? { name: fd.name } : null) };
+  simOpen = null; render(); window.scrollTo(0, 0);
+}
+
+/* ---- formulário ---- */
+function genView() {
+  const c = simGen.cfg; const total = genTotal(c); const M = GEN_MODELS[c.model] || GEN_MODELS.outra;
+  const name = (c.model === "outra" ? c.name.trim() : M.name) || "Simulado";
+  const planning = GENRUN && !GENRUN.sim;
+  return `<div class="head"><div><button class="btn sm ghost" id="genBack">← Voltar</button><h1 style="margin-top:8px">Simulado inédito com IA</h1><p>A IA cria questões novas, no estilo da prova escolhida e no nível que você quiser. Anexe provas antigas para ela imitar a banca ainda melhor.</p></div></div>
+  ${planning ? `<div class="card">${genProgHTML()}</div>` : GENRUN ? `<div class="note warn">Já tem um simulado sendo criado. Espere ele terminar para criar outro.</div>` : ""}
+  <div class="grid g2">
+    <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>1. Prova e nível</h2>
+      <label class="field"><span>Prova que o simulado vai imitar</span><select id="gModel">${Object.entries(GEN_MODELS).map(([k, m]) => `<option value="${k}" ${c.model === k ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>
+      ${c.model === "outra" ? `<label class="field"><span>Nome da prova</span><input type="text" id="gName" maxlength="60" value="${esc(c.name)}" placeholder="Ex.: UniRV Medicina, UFMS, UFG"></label>
+      <label class="field"><span>Como é essa prova (opcional)</span><textarea id="gDesc" maxlength="1500" placeholder="Ex.: 60 questões, 5 alternativas, muita Biologia e Química, enunciados curtos">${esc(c.custom)}</textarea></label>` : `<p class="sub" style="margin:0">${esc(M.desc)}</p>`}
+      <label class="field"><span>Dificuldade</span><select id="gLevel">${GEN_LEVELS.map(([k, l]) => `<option value="${k}" ${c.level === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field"><span>Conteúdos para focar (opcional)</span><textarea id="gFocus" maxlength="1500" placeholder="Ex.: genética, estequiometria e funções. Em branco, segue o que a prova real mais cobra.">${esc(c.focus)}</textarea></label>
+      <div class="row"><label class="field"><span>Alternativas por questão</span><select id="gAlts"><option value="5" ${c.alts === 5 ? "selected" : ""}>5 (A a E)</option><option value="4" ${c.alts === 4 ? "selected" : ""}>4 (A a D)</option></select></label>
+      <label class="field"><span>Tempo de prova (min)</span><input type="number" id="gDur" min="5" max="720" value="${c.dur}"></label></div>
+      <label class="row" style="gap:8px"><input type="checkbox" id="gEssay" ${c.essay ? "checked" : ""}> Incluir proposta de redação</label>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>2. Questões por disciplina</h2>
+      <div class="row"><button class="btn sm" data-gsize="full">Prova completa</button><button class="btn sm" data-gsize="half">Metade</button><button class="btn sm" data-gsize="20">20 questões</button><button class="btn sm" data-gsize="10">10 questões</button></div>
+      <div class="list">${c.areas.map(([a, n], i) => `<div class="item"><div class="grow t">${esc(a)}</div><input type="number" data-garea="${i}" min="0" max="90" value="${n}" style="width:84px" aria-label="Questões de ${esc(a)}"></div>`).join("")}</div>
+      <p class="sub" style="margin:0"><b id="gTotal">${total}</b> questões no total. As quantidades seguem as provas recentes, de forma aproximada; ajuste como quiser.</p>
+    </div>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>3. Provas antigas para a IA se basear (opcional)</h2>
+    <p class="sub" style="margin:0">Anexe PDFs ou fotos de provas anteriores dessa banca. A IA usa só como referência de estilo, nível e conteúdos mais cobrados, sem copiar as questões.</p>
+    <div class="drop" id="gDrop" tabindex="0" role="button">Toque para anexar <b>PDFs, fotos ou textos</b> de provas antigas</div>
+    <input type="file" id="gFile" multiple accept="image/*,application/pdf,.pdf,.txt,.md" hidden>
+    <div class="thumbs" id="gThumbs"></div>
+  </div>
+  <div class="card"><div class="row"><label class="field" style="flex:1 1 220px"><span>Salvar na pasta</span><select id="gFolder"><option value="">+ Nova pasta "${esc(name)}"</option>${S.simfolders.map(f => `<option value="${f.id}" ${c.folder === f.id ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></label>
+    <label class="field" style="flex:1 1 180px"><span>Qualidade da IA</span><select id="gTier"><option value="default" ${c.tier === "default" ? "selected" : ""}>Equilibrada</option><option value="complex" ${c.tier === "complex" ? "selected" : ""}>Máxima (mais lenta)</option></select></label></div>
+    <div class="row end" style="margin-top:12px"><span class="sub" style="margin-right:auto">Leva alguns minutos. Você pode usar o resto do app enquanto a IA cria; se fechar o app, continue depois de onde parou.</span><button class="btn pri" id="gGo" ${total && !GENRUN ? "" : "disabled"}>${ico("ia")}Criar simulado inédito</button></div></div>`;
+}
+function bindGenForm(v) {
+  const c = simGen.cfg;
+  $("#genBack").onclick = () => { if (!GENRUN) GENATT = []; simGen = null; render(); };
+  const gc = $("#genCancel"); if (gc) gc.onclick = () => GENRUN && GENRUN.ctl.abort();
+  $("#gModel").onchange = e => { simGen.cfg = genCfg(e.target.value, c.folder, { level: c.level, focus: c.focus, tier: c.tier }); render(); };
+  const nm = $("#gName"); if (nm) nm.oninput = () => { c.name = nm.value; };
+  const ds = $("#gDesc"); if (ds) ds.oninput = () => { c.custom = ds.value; };
+  $("#gLevel").onchange = e => { c.level = e.target.value; if (c.level === "medicina" && c.tier === "default") { c.tier = "complex"; const t = $("#gTier"); if (t) t.value = "complex"; } };
+  $("#gFocus").oninput = e => { c.focus = e.target.value; };
+  $("#gAlts").onchange = e => { c.alts = +e.target.value; };
+  $("#gDur").onchange = e => { c.dur = Math.max(5, Math.min(720, Math.round(+e.target.value || 0))); e.target.value = c.dur; };
+  $("#gEssay").onchange = e => { c.essay = e.target.checked; };
+  $("#gFolder").onchange = e => { c.folder = e.target.value; };
+  $("#gTier").onchange = e => { c.tier = e.target.value; };
+  v.querySelectorAll("[data-gsize]").forEach(b => b.onclick = () => { genScale(c, b.dataset.gsize); render(); });
+  v.querySelectorAll("[data-garea]").forEach(inp => inp.oninput = () => {
+    c.areas[+inp.dataset.garea][1] = Math.max(0, Math.min(90, Math.round(+inp.value || 0)));
+    const t = genTotal(c); $("#gTotal").textContent = t; $("#gGo").disabled = !t || !!GENRUN;
+    c.dur = Math.max(10, Math.round(t * (GEN_MODELS[c.model] || GEN_MODELS.outra).minPerQ)); $("#gDur").value = c.dur;
+  });
+  const drop = $("#gDrop"), fi = $("#gFile");
+  drop.onclick = () => fi.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fi.click(); } };
+  fi.onchange = () => { addGenFiles([...fi.files]); fi.value = ""; };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addGenFiles([...e.dataTransfer.files]); };
+  renderGenAtt();
+  $("#gGo").onclick = () => {
+    if (c.model === "outra" && !c.name.trim()) return toast("Escreva o nome da prova que o simulado vai imitar");
+    genStart(clone(c));
+  };
+}
+async function addGenFiles(files) {
+  for (const f of files) {
+    const n = f.name || "imagem";
+    if (/^image\//.test(f.type)) GENATT.push({ id: uid(), kind: "image", name: n, blob: f, url: URL.createObjectURL(f) });
+    else if (f.type === "application/pdf" || /\.pdf$/i.test(n)) { const a = { id: uid(), kind: "pdf", name: n, text: "", pages: [], status: "lendo…" }; GENATT.push(a); renderGenAtt(); readPdf(f, a, renderGenAtt); }
+    else if (/^text\//.test(f.type) || /\.(txt|md)$/i.test(n)) GENATT.push({ id: uid(), kind: "text", name: n, text: (await f.text()).slice(0, 120000) });
+    else toast(`Formato não suportado: ${n}. Use PDF, foto ou texto.`);
+  }
+  renderGenAtt();
+}
+function renderGenAtt() {
+  const el = $("#gThumbs"); if (!el) return;
+  el.innerHTML = GENATT.map(a => `<div class="thumb" title="${esc(a.name)}">${a.kind === "image" ? `<img src="${a.url}" alt="${esc(a.name)}">` : `<div><b>${a.kind.toUpperCase()}</b><br>${esc(a.name.slice(0, 26))}<br><small>${esc(a.status || (a.text ? Math.round(a.text.length / 1000) + "k caracteres" : ""))}</small></div>`}<button data-grm="${a.id}" aria-label="Remover ${esc(a.name)}">×</button></div>`).join("");
+  el.querySelectorAll("[data-grm]").forEach(b => b.onclick = () => { GENATT = GENATT.filter(x => x.id !== b.dataset.grm); renderGenAtt(); });
+}
+
+/* ---- criação: plano da prova, questões em lotes e proposta de redação ---- */
+async function genStart(c) {
+  const ai = await getAI(); if (!ai) return toast("Abra o Memora no Claude para usar a IA");
+  if (GENRUN) return toast("Já tem um simulado sendo criado. Espere terminar.");
+  if (GENATT.some(a => a.kind === "pdf" && a.status === "lendo…")) return toast("Aguarde terminar a leitura do PDF");
+  const areas = c.areas.map(([a, n]) => [a, Math.max(0, Math.min(90, Math.round(+n || 0)))]).filter(([, n]) => n > 0);
+  const total = areas.reduce((x, [, n]) => x + n, 0); if (!total) return toast("Escolha ao menos uma questão");
+  const M = GEN_MODELS[c.model] || GEN_MODELS.outra;
+  const name = (c.model === "outra" ? c.name.trim() : M.name) || "Vestibular";
+  const desc = (c.model === "outra" ? c.custom.trim() : M.desc).slice(0, 1500);
+  const lv = genLevel(c.level); const L = LETTERS.slice(0, c.alts);
+  const ctl = new AbortController();
+  GENRUN = { sim: null, phase: "Planejando a prova…", done: 0, total, ctl };
+  render();
+  try {
+    const budget = Math.max(20000, Math.min(110000, Math.floor(((AIcaps?.maxPromptBytes || 262144) - 24000) / 1.2)));
+    const material = GENATT.filter(a => a.text).map(a => `### ${a.name}\n${a.text}`).join("\n\n").slice(0, budget);
+    const maxImg = AIcaps?.images?.maxCount || 0;
+    const raw = []; GENATT.forEach(a => { if (a.kind === "image") raw.push(a.blob); if (a.kind === "pdf") raw.push(...a.pages); });
+    if (raw.length && !maxImg) toast(AIERR.images_unavailable);
+    const imgs = maxImg && raw.length ? await fitImages(raw.slice(0, Math.min(maxImg, 8))) : [];
+    const prompt = `Você é a banca elaboradora de um vestibular brasileiro e vai planejar um SIMULADO INÉDITO.
+Prova a imitar: ${name}.${desc ? " " + desc : ""}
+Dificuldade pedida: ${lv[2]}.
+${c.focus.trim() ? `Foco pedido pelo estudante (priorize esses conteúdos): ${c.focus.trim()}` : ""}
+Distribuição (siga exatamente):
+${areas.map(([a, n]) => `- ${a}: ${n} questões`).join("\n")}
+Total: ${total} questões com ${c.alts} alternativas cada (${L[0]} a ${L[L.length - 1]}).
+${material ? `Provas antigas anexadas pelo estudante. Use só para entender o estilo, o nível e os conteúdos mais cobrados; não copie questões:\n"""${material}"""` : "Não há prova antiga anexada: use o que se sabe sobre o estilo dessa banca."}
+${imgs.length ? `Também há ${imgs.length} imagem(ns) de provas antigas para você observar o estilo.` : ""}
+Planeje uma questão para cada vaga, sem repetir conteúdo, cobrindo os temas que essa banca mais cobra.
+Responda SOMENTE com JSON: {"titulo": "nome curto do simulado", "estilo": "6 a 10 linhas descrevendo como essa banca escreve: tamanho dos enunciados, uso de textos-base, tipo de raciocínio cobrado, armadilhas típicas", "plano": [{"disciplina": "uma das disciplinas da distribuição, escrita igual", "conteudo": "conteúdo específico, em ${total > 60 ? "até 6" : "poucas"} palavras", ${total > 60 ? "" : `"habilidade": "o que a questão cobra, em até 12 palavras", `}"dificuldade": "facil|media|dificil"}]}
+O plano deve ter exatamente ${total} itens, na ordem da distribuição.${total > 60 ? " Seja breve em cada item: a prova é grande." : ""}`;
+    let out = null;
+    try { out = await ai.json(prompt, { images: imgs.length ? imgs : undefined, modelTier: c.tier, signal: ctl.signal }); }
+    catch (e) { if (e?.code === "cancelled" || ctl.signal.aborted || !["invalid_json", "empty_completion"].includes(e?.code)) throw e; }   // sem plano, cada lote escolhe os conteúdos
+    if (ctl.signal.aborted) throw { code: "cancelled" };
+    const plan = genFitPlan(out && out.plano, areas, c.alts);
+    let fd = S.simfolders.find(f => f.id === c.folder);
+    if (!fd) { fd = { id: uid(), name, qn: total, dur: c.dur, subjects: areas.map(([a]) => a), ranges: "", createdAt: Date.now() }; S.simfolders.push(fd); commit("simfolders"); }
+    const nth = folderSims(fd.id).length + 1;
+    const s = { id: uid(), folder: fd.id, name: String((out && out.titulo) || "").trim().slice(0, 80) || `${nth}º Simulado inédito ${name}`, date: dkey(), qn: total, dur: c.dur,
+      q: plan.map(p => ({ s: p.d, r: "", g: false, c: p.c, n: "" })), manual: null, files: [], analysis: null, createdAt: Date.now(),
+      gen: { name, model: c.model, level: c.level, alts: c.alts, tier: c.tier, dur: c.dur, focus: c.focus.trim().slice(0, 1500), desc, essay: !!c.essay, estilo: String((out && out.estilo) || "").slice(0, 3000), excerpt: material.slice(0, 12000), plan, status: "gerando", dev: DEV, createdAt: Date.now() } };
+    commitSim(s);
+    const onForm = route === "simulados" && !!simGen && !simOpen;
+    GENATT = []; simGen = null; GENRUN.sim = s.id;
+    if (onForm) { simFolder = fd.id; simOpen = s.id; render(); window.scrollTo(0, 0); } else genRender();
+    await genFill(s, ctl);
+  } catch (e) {
+    GENRUN = null; genRender();
+    if (e?.code !== "cancelled") toast(aiErr(e));
+  }
+}
+function genFitPlan(plano, areas, alts) {
+  const items = (Array.isArray(plano) ? plano : []).filter(isPlain).map(p => ({ d: String(p.disciplina || ""), c: String(p.conteudo || "").slice(0, 140), h: String(p.habilidade || "").slice(0, 160), dif: String(p.dificuldade || "").slice(0, 12) }));
+  const used = new Set(); const out = [];
+  const match = (p, na) => { const nd = hnorm(p.d); return !!nd && (nd === na || na.includes(nd) || nd.includes(na)); };
+  for (const [a, n] of areas) {
+    const na = hnorm(a); const mine = [];
+    items.forEach((p, i) => { if (!used.has(i) && mine.length < n && match(p, na)) { used.add(i); mine.push(p); } });
+    while (mine.length < n) mine.push({ d: a, c: "", h: "", dif: "" });
+    mine.forEach(p => out.push({ c: p.c, h: p.h, dif: p.dif, d: a }));
+  }
+  const L = LETTERS.slice(0, alts).split(""); const ks = out.map((_, i) => L[i % L.length]);   // gabarito equilibrado entre as letras
+  for (let i = ks.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ks[i], ks[j]] = [ks[j], ks[i]]; }
+  out.forEach((p, i) => { p.k = ks[i]; });
+  return out;
+}
+function genNormQ(o, p, alts) {
+  if (!isPlain(o)) return null;
+  const L = LETTERS.slice(0, alts);
+  let a = Array.isArray(o.alternativas) ? o.alternativas : isPlain(o.alternativas) ? L.split("").map(l => o.alternativas[l] ?? o.alternativas[l.toLowerCase()]) : null;
+  if (!a) return null;
+  a = a.map(x => String(x ?? "").replace(/^\s*\(?[A-Ea-e]\s*[\)\.\-:]\s+/, "").trim());
+  if (a.length !== alts || a.some(x => !x)) return null;
+  const k = String(o.gabarito || "").toUpperCase().replace(/[^A-E]/g, "").slice(0, 1);
+  if (!k || !L.includes(k)) return null;
+  const e = String(o.enunciado || "").trim(); if (e.length < 10) return null;
+  return { d: String((p && p.d) || o.disciplina || "").slice(0, 60), c: String((p && p.c) || o.conteudo || "").slice(0, 160), t: String(o.texto || "").trim().slice(0, 3500), e: e.slice(0, 2500), a: a.map(x => x.slice(0, 500)), k, r: String(o.resolucao || "").trim().slice(0, 2500), dif: String((p && p.dif) || "") };
+}
+async function genBatch(ai, s, idx, ctl) {
+  const G = s.gen; const L = LETTERS.slice(0, G.alts); const lv = genLevel(G.level); const plan = G.plan || [];
+  const slice = idx.map(i => { const p = plan[i] || {}; return { n: i + 1, disciplina: p.d || s.q[i].s, conteudo: p.c || s.q[i].c || "(escolha um conteúdo importante desta disciplina, sem repetir os já usados)", habilidade: p.h || "", dificuldade: p.dif || "", correta: p.k || L[i % L.length] }; });
+  const subj = new Set(slice.map(x => x.disciplina));
+  const usedC = [...new Set(s.q.filter((x, i) => x.qt && subj.has(x.s) && !idx.includes(i)).map(x => x.qt.c || x.c).filter(Boolean))].slice(-60);
+  const prompt = `Você é a banca elaboradora de um vestibular brasileiro. Escreva as questões ${idx.map(i => i + 1).join(", ")} do simulado inédito "${s.name}", que imita a prova ${G.name}.
+${G.desc ? "Sobre a prova: " + G.desc : ""}
+${G.estilo ? "Como essa banca escreve: " + G.estilo : ""}
+Dificuldade pedida: ${lv[2]}.
+${G.focus ? "Foco pedido pelo estudante: " + G.focus : ""}
+Regras:
+- Questões 100% inéditas: não copie nem parafraseie questões de provas reais nem das provas anexadas.
+- Cada questão tem exatamente ${G.alts} alternativas (${L[0]} a ${L[L.length - 1]}), só uma correta, e a correta deve ficar na letra indicada em "correta".
+- Distratores plausíveis, baseados em erros comuns de estudantes; nada de alternativas absurdas.
+- Enunciado completo e autossuficiente. Quando precisar de gráfico, tabela ou figura, descreva em texto ou monte uma tabela simples em texto; não dependa de imagens.
+- Textos-base escritos por você; não atribua citações a autores reais nem invente estatísticas apresentadas como reais.
+- Conteúdo correto e atualizado; fórmulas com unicode (ex.: H₂O, 10⁻³, √2).
+- Português do Brasil, no tom da banca.
+${usedC.length ? `Conteúdos já usados em outras questões deste simulado (não repita): ${usedC.join("; ")}` : ""}
+Questões a escrever: ${JSON.stringify(slice)}
+${G.excerpt ? `Trecho de prova antiga, só como referência de estilo (não copie):\n"""${G.excerpt}"""` : ""}
+Responda SOMENTE com JSON: {"questoes": [{"n": número, "texto": "texto-base, se houver (senão vazio)", "enunciado": "comando da questão", "alternativas": [${L.split("").map(l => `"texto da ${l}"`).join(", ")}], "gabarito": "letra correta", "resolucao": "por que a correta está certa e o erro de cada uma das outras, em até 6 linhas"}]}`;
+  const out = await ai.json(prompt, { modelTier: G.tier, signal: ctl.signal });
+  if (ctl.signal.aborted) throw { code: "cancelled" };
+  const qs = Array.isArray(out?.questoes) ? out.questoes : [];
+  let ok = 0;
+  qs.forEach((o, j) => {
+    const n = Math.round(+(o && o.n)); const i = idx.includes(n - 1) ? n - 1 : idx[j];
+    if (i == null || !s.q[i] || s.q[i].qt) return;
+    const Q = genNormQ(o, plan[i] || { d: s.q[i].s, c: s.q[i].c }, G.alts); if (!Q) return;
+    s.q[i].qt = Q; if (!s.q[i].c && Q.c) s.q[i].c = Q.c; ok++;
+  });
+  if (!ok) throw { code: "empty_completion" };
+  commitSim(s);
+}
+async function genEssay(ai, s, ctl) {
+  const G = s.gen;
+  const prompt = `Você é a banca de ${G.name}. Crie uma proposta de redação INÉDITA no formato dessa prova${/enem/i.test(G.name) ? " (texto dissertativo-argumentativo sobre um problema da sociedade brasileira, com proposta de intervenção)" : ""}.${G.desc ? " Sobre a prova: " + G.desc : ""}
+Escolha um tema atual e relevante, diferente dos já cobrados em provas reais. Escreva textos motivadores originais, sem atribuí-los a autores ou veículos reais e sem inventar números apresentados como reais. Português do Brasil.
+Responda SOMENTE com JSON: {"tema": "...", "genero": "gênero textual pedido", "instrucoes": "instruções como na prova (extensão, título, o que leva a nota zero)", "textos": ["texto motivador 1 (até 8 linhas)", "texto motivador 2", "texto motivador 3"]}`;
+  const out = await ai.json(prompt, { modelTier: G.tier, signal: ctl.signal });
+  if (out && out.tema) { s.essayPrompt = { tema: String(out.tema).slice(0, 300), genero: String(out.genero || "").slice(0, 120), instrucoes: String(out.instrucoes || "").slice(0, 1500), textos: (Array.isArray(out.textos) ? out.textos : []).map(t => String(t).slice(0, 1500)).slice(0, 4) }; commitSim(s); }
+}
+async function genFill(s, ctl) {
+  const ai = await getAI(); if (!ai) { GENRUN = null; genRender(); return toast("Abra o Memora no Claude para usar a IA"); }
+  const G = s.gen; const missing = () => s.q.map((x, i) => x.qt ? -1 : i).filter(i => i >= 0);
+  GENRUN = Object.assign(GENRUN || {}, { sim: s.id, total: s.qn, ctl });
+  if (G.status !== "gerando" || G.dev !== DEV) { G.status = "gerando"; G.dev = DEV; commitSim(s); }
+  let stop = null, fails = 0;
+  const upd = () => { if (!GENRUN || GENRUN.sim !== s.id) return; GENRUN.done = s.q.filter(x => x.qt).length; GENRUN.phase = `Escrevendo as questões… ${GENRUN.done} de ${s.qn}`; genPaint(); };
+  for (let pass = 0; pass < 3 && missing().length && !stop && !ctl.signal.aborted && !s.deleted; pass++) {
+    const miss = missing(); const bs = pass ? 3 : GEN_BATCH; const queue = [];   // na repescagem, lotes menores
+    for (let i = 0; i < miss.length; i += bs) queue.push(miss.slice(i, i + bs));
+    upd();
+    const worker = async () => {
+      while (queue.length && !stop && !ctl.signal.aborted && !s.deleted) {
+        const idx = queue.shift();
+        try { await genBatch(ai, s, idx, ctl); fails = 0; }
+        catch (e) {
+          if (e?.code === "cancelled" || ctl.signal.aborted) { stop = "cancelled"; break; }
+          if (["not_granted", "sampling_disabled", "session_expired", "prompt_too_large", "not_declared", "capability_disabled", "capability_removed", "refused"].includes(e?.code)) { stop = e; break; }
+          if (e?.code === "rate_limited") await new Promise(r => setTimeout(r, 15000));
+          if (++fails >= 4) { stop = e; break; }
+        }
+        upd();
+      }
+    };
+    await Promise.all([worker(), worker()]);
+  }
+  if (!stop && !ctl.signal.aborted && !s.deleted && G.essay && !s.essayPrompt) {
+    if (GENRUN) { GENRUN.phase = "Criando a proposta de redação…"; genPaint(); }
+    try { await genEssay(ai, s, ctl); } catch (e) { if (e?.code === "cancelled" || ctl.signal.aborted) stop = "cancelled"; }
+  }
+  const left = missing().length;
+  G.status = left ? "incompleto" : "pronto";
+  if (!left) delete G.plan;            // o plano só serve enquanto falta questão
+  commitSim(s);
+  GENRUN = null; genRender();
+  if (s.deleted) return;
+  if (stop === "cancelled") toast(`Criação pausada: ${s.qn - left} de ${s.qn} questões prontas. Continue quando quiser.`);
+  else if (left) toast(`${s.qn - left} de ${s.qn} questões prontas. Toque em Continuar criando.${stop ? " (" + aiErr(stop) + ")" : ""}`);
+  else toast(`Simulado pronto: ${s.qn} questões inéditas`);
+}
+function genResume(s) {
+  if (GENRUN) return toast("Já tem um simulado sendo criado. Espere terminar.");
+  if (!s.gen.plan) s.gen.plan = s.q.map((x, i) => ({ d: x.s, c: x.c, h: "", dif: "", k: (x.qt && x.qt.k) || LETTERS[i % s.gen.alts] }));
+  const ctl = new AbortController(); GENRUN = { sim: s.id, phase: "Retomando…", done: s.q.filter(x => x.qt).length, total: s.qn, ctl }; render();
+  genFill(s, ctl);
+}
+function genPaint() {
+  const r = GENRUN; if (!r) return;
+  const p = $("#genProg"); if (p) p.textContent = r.phase;
+  const b = $("#genBar"); if (b) b.style.width = Math.round((r.done || 0) / Math.max(1, r.total) * 100) + "%";
+}
+const genProgHTML = () => `<div class="genprog"><div class="row"><span class="spin"></span><span class="sub" id="genProg" role="status">${esc(GENRUN.phase || "")}</span><button class="btn sm" id="genCancel" style="margin-left:auto">Pausar</button></div><div class="bar"><div id="genBar" style="width:${Math.round((GENRUN.done || 0) / Math.max(1, GENRUN.total) * 100)}%"></div></div></div>`;
+
+/* ---- simulado inédito antes da prova ---- */
+const takeDone = s => !!(s && s.take && s.take.done);
+function genStatus(s) {
+  if (GENRUN && GENRUN.sim === s.id) return "gerando";
+  if (!s.q.some(x => !x.qt)) return "pronto";
+  const other = s.gen.dev && s.gen.dev !== DEV && Date.now() - (s.updatedAt || 0) < 180000;   // outro aparelho criando, ou as questões ainda chegando de lá
+  return other && (s.gen.status === "gerando" || s.gen.status === "pronto") ? "outro" : "incompleto";
+}
+function genSimView(s) {
+  const fd = S.simfolders.find(f => f.id === s.folder) || { name: "Simulados" }; const G = s.gen;
+  const have = s.q.filter(x => x.qt).length; const st = genStatus(s);
+  const started = !!(s.take && (s.take.spent > 0 || s.take.resumedAt)) || s.q.some(x => x.m);
+  return `<div class="head"><div><button class="btn sm ghost" id="back">← ${esc(fd.name)}</button><h1 style="margin-top:8px">${esc(s.name)}</h1><p>Simulado inédito · ${esc(G.name)} · ${genLevel(G.level)[1]} · ${s.qn} questões · ${fmtHM((G.dur || s.dur) * 60)} de prova</p></div>
+  <div class="row"><button class="btn" id="editS">Editar dados</button><button class="btn ghost danger" id="delS">Excluir</button></div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><div class="ttl" style="margin:0"><h2>${st === "pronto" ? "Prova pronta" : st === "incompleto" ? "Prova incompleta" : "Criando as questões"}</h2><span class="pill">${ico("ia")}inédito</span></div>
+    ${st === "gerando" ? genProgHTML() : st === "outro" ? `<div class="note"><div class="row"><span class="spin"></span><span style="flex:1;min-width:200px">${G.status === "pronto" ? "Criado em outro aparelho" : "Sendo criado em outro aparelho"}: ${have} de ${s.qn} questões já chegaram. As outras aparecem aqui sozinhas.</span><button class="btn sm" id="genResume">Continuar aqui</button></div></div>` : st === "incompleto" ? `<div class="note warn"><div class="row"><span style="flex:1;min-width:200px">${have} de ${s.qn} questões prontas. Falta criar ${s.qn - have}.</span><button class="btn sm pri" id="genResume">Continuar criando</button></div></div>` : ""}
+    <p class="sub" style="margin:0">Faça a prova aqui, com cronômetro e correção automática, ou baixe para imprimir e depois marque suas respostas na folha de respostas.${have < s.qn ? " Se entregar antes de todas ficarem prontas, as que faltam ficam fora da nota." : ""}${G.focus ? ` Foco: ${esc(G.focus.slice(0, 120))}.` : ""}</p>
+    <div class="row"><button class="btn pri" id="takeGo" ${have ? "" : "disabled"}>${started ? "Continuar a prova" : "Fazer a prova"}</button><button class="btn" id="genPrint" ${have ? "" : "disabled"}>Baixar para imprimir</button></div>
+    ${started ? `<p class="sub" style="margin:0">${s.q.filter(x => x.m).length} de ${s.qn} respondidas · ${fmtHM(takeSpent(s))} usados</p>` : ""}
+  </div>
+  ${s.essayPrompt ? `<details class="card"><summary style="cursor:pointer;font-weight:600">Proposta de redação</summary>${essayPromptHTML(s.essayPrompt, true)}</details>` : ""}`;
+}
+function bindGenSim(v, s) {
+  $("#back").onclick = () => { simOpen = null; render(); };
+  $("#editS").onclick = () => editSim(S.simfolders.find(f => f.id === s.folder) || { name: "", qn: s.qn, dur: s.dur }, s);
+  $("#delS").onclick = () => confirmBox(`Excluir "${s.name}"?`, "Excluir", () => { if (GENRUN && GENRUN.sim === s.id) GENRUN.ctl.abort(); const e = trashAdd("sim", s.name, { id: s.id }); s.deleted = true; commitSim(s); simOpen = null; render(); afterDelete("Simulado excluído", e); });
+  const gc = $("#genCancel"); if (gc) gc.onclick = () => GENRUN && GENRUN.ctl.abort();
+  const gr = $("#genResume"); if (gr) gr.onclick = () => genResume(s);
+  const tg = $("#takeGo"); if (tg) tg.onclick = () => { simTake = s.id; takeMode = "q"; takeIdx = Math.max(0, s.q.findIndex(x => x.qt && !x.m)); render(); window.scrollTo(0, 0); };
+  const gp = $("#genPrint"); if (gp) gp.onclick = () => simDownload(s);
+}
+const essayPromptHTML = (E, inner) => `${inner ? "" : `<div class="card">`}<h2 style="margin:${inner ? "12px 0 8px" : "0 0 8px"}">Proposta de redação</h2><p style="margin:0 0 8px"><b>Tema:</b> ${esc(E.tema)}</p>${E.genero ? `<p class="sub" style="margin:0 0 8px">Gênero: ${esc(E.genero)}</p>` : ""}${(E.textos || []).map((t, i) => `<div class="tktext"><b>Texto ${i + 1}</b>\n${esc(t)}</div>`).join("")}${E.instrucoes ? `<p class="errnote" style="margin:10px 0 0">${esc(E.instrucoes)}</p>` : ""}<p class="sub" style="margin:10px 0 0">Escreva no papel e, depois de corrigir, registre a nota em Redação, dentro do simulado.</p>${inner ? "" : `</div>`}`;
+
+/* ---- fazer a prova: o tempo só conta com a prova aberta neste aparelho ---- */
+const takeLive = s => { const t = s && s.take; if (!t || !t.resumedAt || t.done) return false; return takeRunning === s.id || (t.dev !== DEV && Date.now() - t.resumedAt < TAKE_STALE); };
+const takeSpent = s => { const t = s && s.take; if (!t) return 0; return (t.spent || 0) + (takeLive(s) ? Math.max(0, Date.now() - t.resumedAt) / 1000 : 0); };
+function takeResume(s) {
+  if (!s || takeDone(s) || takeRunning === s.id) return;
+  const t = s.take || (s.take = { spent: 0, startedAt: Date.now(), resumedAt: 0 });
+  if (t.resumedAt && t.dev !== DEV && Date.now() - t.resumedAt < TAKE_STALE) t.spent = (t.spent || 0) + Math.max(0, Date.now() - t.resumedAt) / 1000;   // estava aberta em outro aparelho: continua daqui
+  t.resumedAt = Date.now(); t.dev = DEV; takeRunning = s.id; commitSim(s);
+}
+function takePause(s) {
+  if (!s || takeRunning !== s.id) return;
+  const t = s.take; if (t && t.resumedAt) { t.spent = takeSpent(s); t.resumedAt = 0; }
+  takeRunning = null; commitSim(s);
+}
+function leaveTake() { if (simTake) { const s = SIMS[simTake]; simTake = null; takePause(s); } }
+function takeView(s) {
+  const L = LETTERS.slice(0, s.gen.alts); const n = s.q.length; const hasEssay = !!s.essayPrompt; const pages = n + (hasEssay ? 1 : 0);
+  takeIdx = Math.max(0, Math.min(pages - 1, takeIdx));
+  const answered = s.q.filter(x => x.m).length;
+  const rem = (s.gen.dur || s.dur) * 60 - takeSpent(s);
+  let body;
+  if (takeMode === "sheet") body = `<div class="card"><h2>Folha de respostas</h2><p class="sub" style="margin:0 0 10px">Para quem fez a prova no papel: marque aqui as letras que escolheu e depois toque em Entregar.</p><div class="sheet">${s.q.map((x, i) => `<div class="shrow" data-shq="${i}"><b class="mono">${pad(i + 1)}</b>${x.qt ? L.split("").map(l => `<button class="shl ${x.m === l ? "on" : ""}" data-shl="${l}" aria-label="Questão ${i + 1}, letra ${l}" aria-pressed="${x.m === l}">${l}</button>`).join("") : `<span class="sub">ainda não criada</span>`}</div>`).join("")}</div></div>`;
+  else if (takeIdx === n && hasEssay) body = essayPromptHTML(s.essayPrompt);
+  else {
+    const x = s.q[takeIdx]; const Q = x.qt;
+    body = !Q ? `<div class="card empty">Esta questão ainda não foi criada.${GENRUN && GENRUN.sim === s.id ? " A IA está escrevendo; ela aparece aqui quando ficar pronta." : " Ela fica fora da nota se você entregar assim."}</div>` : `<div class="card tkq"><div class="row" style="justify-content:space-between"><b>Questão ${takeIdx + 1} de ${n}</b>${subjPill(Q.d)}</div>
+      ${Q.t ? `<div class="tktext">${esc(Q.t)}</div>` : ""}<div class="tkstem">${esc(Q.e)}</div>
+      <div class="tkalts" role="radiogroup" aria-label="Alternativas da questão ${takeIdx + 1}">${Q.a.map((a, j) => `<button class="tkalt ${x.m === L[j] ? "on" : ""}" data-alt="${L[j]}" role="radio" aria-checked="${x.m === L[j]}"><b>${L[j]}</b><span>${esc(a)}</span></button>`).join("")}</div>
+      <div class="row" style="gap:16px"><label class="gch"><input type="checkbox" data-tkg ${x.g ? "checked" : ""}> chutei</label><label class="gch"><input type="checkbox" data-tkf ${x.f ? "checked" : ""}> marcar para revisar</label></div></div>`;
+  }
+  const grid = s.q.map((x, i) => `<button class="tkn ${x.m ? "ans" : ""} ${x.f ? "flag" : ""} ${x.qt ? "" : "miss"} ${i === takeIdx ? "cur" : ""}" data-tkn="${i}" aria-label="Questão ${i + 1}${x.m ? ", respondida" : ""}${x.f ? ", marcada para revisar" : ""}${x.qt ? "" : ", ainda não criada"}">${i + 1}</button>`).join("") + (hasEssay ? `<button class="tkn ${takeIdx === n ? "cur" : ""}" data-tkn="${n}" aria-label="Proposta de redação">R</button>` : "");
+  return `<div class="take">
+  <div class="takebar card"><button class="btn sm ghost" id="tkExit" title="Sair e pausar o tempo">← Sair</button><div class="grow"><b>${esc(s.name)}</b><span class="sub" id="tkCount">${answered} de ${n} respondidas</span></div><span class="mono tkclock ${rem < 0 ? "late" : ""}" id="tkClock" title="Tempo restante">${rem < 0 ? "+" : ""}${fmtClock(Math.abs(rem))}</span><button class="btn pri" id="tkSubmit">Entregar</button></div>
+  <div class="row"><div class="tabs" id="tkMode"><button data-tm="q" class="${takeMode === "q" ? "on" : ""}">Questões</button><button data-tm="sheet" class="${takeMode === "sheet" ? "on" : ""}">Folha de respostas</button></div><span class="sub tkhint">No teclado: ${L[0]} a ${L[L.length - 1]} respondem, ← e → mudam de questão.</span></div>
+  ${takeMode === "q" ? `<div class="tkgrid">${grid}</div>` : ""}
+  ${body}
+  ${takeMode === "q" ? `<div class="row" style="justify-content:space-between"><button class="btn" id="tkPrev" ${takeIdx ? "" : "disabled"}>← Anterior</button><button class="btn" id="tkNext" ${takeIdx < pages - 1 ? "" : "disabled"}>Próxima →</button></div>` : ""}
+  </div>`;
+}
+function bindTake(v, s) {
+  takeResume(s);
+  $("#tkExit").onclick = () => { leaveTake(); render(); window.scrollTo(0, 0); toast("Prova pausada. O tempo volta a contar quando você continuar."); };
+  $("#tkSubmit").onclick = () => { const blank = s.q.filter(x => x.qt && !x.m).length; const miss = s.q.filter(x => !x.qt).length;
+    confirmBox(`Entregar a prova? ${blank ? `${blank} ${blank > 1 ? "questões ficaram" : "questão ficou"} em branco.` : "Todas as questões foram respondidas."}${miss ? ` ${miss} ainda não ${miss > 1 ? "foram criadas e ficam" : "foi criada e fica"} fora da nota.` : ""}`, "Entregar", () => finishTake(s)); };
+  v.querySelectorAll("#tkMode [data-tm]").forEach(b => b.onclick = () => { takeMode = b.dataset.tm; render(); });
+  v.querySelectorAll("[data-tkn]").forEach(b => b.onclick = () => { takeIdx = +b.dataset.tkn; render(); window.scrollTo(0, 0); });
+  v.querySelectorAll("[data-alt]").forEach(b => b.onclick = () => takeAnswer(s, takeIdx, b.dataset.alt));
+  const g = v.querySelector("[data-tkg]"); if (g) g.onchange = () => { s.q[takeIdx].g = g.checked; commitSimSoon(s); };
+  const f = v.querySelector("[data-tkf]"); if (f) f.onchange = () => { s.q[takeIdx].f = f.checked ? 1 : 0; commitSimSoon(s); const c = document.querySelector(`[data-tkn="${takeIdx}"]`); if (c) c.classList.toggle("flag", f.checked); };
+  const pv = $("#tkPrev"); if (pv) pv.onclick = () => takeMove(-1);
+  const nx = $("#tkNext"); if (nx) nx.onclick = () => takeMove(1);
+  v.querySelectorAll("[data-shq]").forEach(r => r.querySelectorAll("[data-shl]").forEach(b => b.onclick = () => takeAnswer(s, +r.dataset.shq, b.dataset.shl)));
+}
+function takeAnswer(s, i, l) {
+  const x = s.q[i]; if (!x || !x.qt) return;
+  x.m = x.m === l ? "" : l;
+  if (takeRunning === s.id && s.take && s.take.resumedAt) { s.take.spent = takeSpent(s); s.take.resumedAt = Date.now(); }   // tempo guardado a cada resposta
+  commitSimSoon(s);
+  if (takeMode === "q" && i === takeIdx) document.querySelectorAll("[data-alt]").forEach(b => { const on = b.dataset.alt === x.m; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  const row = document.querySelector(`[data-shq="${i}"]`); if (row) row.querySelectorAll("[data-shl]").forEach(b => { const on = b.dataset.shl === x.m; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+  const cell = document.querySelector(`[data-tkn="${i}"]`); if (cell) cell.classList.toggle("ans", !!x.m);
+  const cnt = $("#tkCount"); if (cnt) cnt.textContent = `${s.q.filter(y => y.m).length} de ${s.q.length} respondidas`;
+}
+function takeMove(d) { const s = SIMS[simTake]; if (!s) return; const pages = s.q.length + (s.essayPrompt ? 1 : 0); const ni = Math.max(0, Math.min(pages - 1, takeIdx + d)); if (ni === takeIdx) return; takeIdx = ni; render(); window.scrollTo(0, 0); }
+function finishTake(s) {
+  takePause(s);
+  let c = 0, n = 0;
+  s.q.forEach(x => { if (!x.qt) { x.an = 1; return; } x.k = x.qt.k; if (x.an) return; n++; x.r = !x.m ? "b" : x.m === x.k ? "c" : "e"; if (x.r === "c") c++; });
+  s.take = Object.assign(s.take || {}, { done: true, finishedAt: Date.now(), resumedAt: 0 });
+  s.dur = Math.max(1, Math.round((s.take.spent || 0) / 60));
+  simTake = null; commitSim(s); render(); window.scrollTo(0, 0);
+  toast(`Prova entregue: ${c} de ${n} acertos (${n ? Math.round(c / n * 100) : 0}%)`);
+}
+function takeClock() {
+  const el = $("#tkClock"); if (!el || !simTake) return; const s = SIMS[simTake]; if (!s || !s.gen) return;
+  const rem = (s.gen.dur || s.dur) * 60 - takeSpent(s);
+  el.textContent = (rem < 0 ? "+" : "") + fmtClock(Math.abs(rem)); el.classList.toggle("late", rem < 0);
+  if (rem < 0 && takeWarned !== s.id) { takeWarned = s.id; toast("Acabou o tempo da prova. Você pode continuar, mas o tempo extra fica registrado."); }
+}
+const editingField = () => { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || a.tagName === "SELECT" || (a.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(a.type))); };
+document.addEventListener("keydown", e => {
+  if (!simTake || route !== "simulados" || simOpen !== simTake || $(".ov") || editingField() || e.ctrlKey || e.metaKey || e.altKey) return;
+  const s = SIMS[simTake]; if (!s || !s.gen || takeDone(s)) return;
+  const L = LETTERS.slice(0, s.gen.alts); const k = e.key.length === 1 ? e.key.toUpperCase() : "";
+  if (k && L.includes(k) && takeMode === "q" && takeIdx < s.q.length) { e.preventDefault(); takeAnswer(s, takeIdx, k); }
+  else if (e.key === "ArrowRight" && takeMode === "q") { e.preventDefault(); takeMove(1); }
+  else if (e.key === "ArrowLeft" && takeMode === "q") { e.preventDefault(); takeMove(-1); }
+});
+
+/* ---- revisão de uma questão depois da prova ---- */
+function questionModal(s, i) {
+  const x = s.q[i]; const Q = x && x.qt; if (!Q) return;
+  const L = LETTERS.slice(0, Q.a.length);
+  modal(`<h2>Questão ${i + 1}${Q.d ? " · " + esc(Q.d) : ""}</h2>
+  ${x.an ? `<div class="note warn">Questão anulada: não conta na nota.</div>` : ""}
+  ${Q.t ? `<div class="tktext">${esc(Q.t)}</div>` : ""}<div class="tkstem">${esc(Q.e)}</div>
+  <div class="tkalts">${Q.a.map((a, j) => { const l = L[j]; const cls = l === Q.k ? "ok" : l === x.m ? "bad" : ""; return `<div class="tkalt ro ${cls}"><b>${l}</b><span>${esc(a)}</span>${l === Q.k ? `<span class="pill" style="color:var(--ok)">correta</span>` : l === x.m ? `<span class="pill" style="color:var(--bad)">sua resposta</span>` : ""}</div>`; }).join("")}</div>
+  ${!x.m ? `<p class="sub" style="margin:0">Você deixou em branco.</p>` : ""}
+  ${Q.r ? `<div class="note errnote"><b>Resolução:</b> ${esc(Q.r)}</div>` : ""}
+  <p class="sub" style="margin:0">Achou um erro na questão, como duas alternativas certas ou nenhuma? Anule para ela não contar na nota.</p>
+  <div class="row end"><button class="btn ghost danger" data-an style="margin-right:auto">${x.an ? "Desfazer anulação" : "Anular questão"}</button><button class="btn" data-exp>${ico("ia")}Explicar melhor</button><button class="btn pri" data-x>Fechar</button></div>`, (m, close) => {
+    m.querySelector("[data-x]").onclick = close;
+    m.querySelector("[data-an]").onclick = () => { x.an = x.an ? 0 : 1; if (!x.an && takeDone(s)) { x.k = Q.k; x.r = !x.m ? "b" : x.m === x.k ? "c" : "e"; } commitSim(s); close(); render(); toast(x.an ? "Questão anulada: ela não conta mais na nota" : "Anulação desfeita"); };
+    m.querySelector("[data-exp]").onclick = () => { close(); resolveQuestion(s, i); };
+  });
+}
+function genQText(s, i) {
+  const x = s.q[i]; const Q = x && x.qt; if (!Q) return "";
+  const L = LETTERS.slice(0, Q.a.length);
+  return `Questão ${i + 1}${Q.d ? " (" + Q.d + ")" : ""}${Q.c ? " · conteúdo: " + Q.c : ""}\n${Q.t ? Q.t + "\n" : ""}${Q.e}\n${Q.a.map((a, j) => `${L[j]}) ${a}`).join("\n")}\nGabarito: ${Q.k}${x.m ? ` · o estudante marcou ${x.m}` : takeDone(s) ? " · o estudante deixou em branco" : ""}${Q.r ? `\nResolução da banca: ${Q.r}` : ""}`;
+}
+function genMaterial(s) {
+  let text = "";
+  s.q.forEach((x, i) => { if (!x.qt || x.an || !(x.r === "e" || x.g || x.r === "b")) return; const t = genQText(s, i); if (text.length + t.length < 140000) text += "\n\n" + t; });
+  return { text: text ? `### Questões erradas, chutadas ou em branco deste simulado inédito (criado pelo Memora)${text}` : "", imgs: [] };
+}
+
+/* ---- baixar a prova para imprimir ---- */
+function simPrintHTML(s) {
+  const G = s.gen; const L = LETTERS.slice(0, G.alts);
+  const qs = s.q.map((x, i) => x.qt ? `<section class="q"><h3>Questão ${i + 1} <small>${esc(x.qt.d)}</small></h3>${x.qt.t ? `<div class="t">${esc(x.qt.t)}</div>` : ""}<p class="e">${esc(x.qt.e)}</p><ol>${x.qt.a.map((a, j) => `<li><b>${L[j]})</b> ${esc(a)}</li>`).join("")}</ol></section>` : "").join("");
+  const essay = s.essayPrompt ? `<section class="pb"><h2>Proposta de redação</h2><p><b>Tema:</b> ${esc(s.essayPrompt.tema)}</p>${s.essayPrompt.genero ? `<p>Gênero: ${esc(s.essayPrompt.genero)}</p>` : ""}${(s.essayPrompt.textos || []).map((t, i) => `<div class="t"><b>Texto ${i + 1}</b><br>${esc(t)}</div>`).join("")}${s.essayPrompt.instrucoes ? `<p class="e">${esc(s.essayPrompt.instrucoes)}</p>` : ""}</section>` : "";
+  const sheet = `<section class="pb"><h2>Folha de respostas</h2><div class="sheet">${s.q.map((x, i) => x.qt ? `<div>${pad(i + 1)} ${L.split("").map(l => `<span class="b">${l}</span>`).join("")}</div>` : "").join("")}</div></section>`;
+  const key = `<section class="pb"><h2>Gabarito</h2><table><tr>${s.q.map((x, i) => `<td><b>${i + 1}</b> ${x.qt ? x.qt.k : "–"}</td>${(i + 1) % 10 ? "" : "</tr><tr>"}`).join("")}</tr></table><h2>Resoluções</h2>${s.q.map((x, i) => x.qt && x.qt.r ? `<p class="e"><b>${i + 1}.</b> ${esc(x.qt.r)}</p>` : "").join("")}</section>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(s.name)}</title>
+<style>body{font:15px/1.55 Georgia,"Times New Roman",serif;max-width:820px;margin:28px auto;padding:0 18px;color:#111;background:#fff}h1{font:700 22px system-ui,sans-serif;margin:0 0 4px}h2{font:700 18px system-ui,sans-serif}h3{font:700 15px system-ui,sans-serif;margin:0 0 6px}h3 small{font-weight:400;color:#555}.meta{color:#555;margin:0 0 20px;font:13px system-ui,sans-serif}.q{break-inside:avoid;border-top:1px solid #ccc;padding-top:12px;margin-top:14px}.t{white-space:pre-wrap;background:#f4f4f4;border-left:3px solid #999;padding:8px 10px;margin:6px 0}.e{white-space:pre-wrap}ol{list-style:none;padding-left:0;margin:6px 0}li{margin:4px 0}.pb{break-before:page;page-break-before:always}.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;font:14px ui-monospace,monospace}.b{display:inline-block;width:22px;height:22px;border:1px solid #333;border-radius:50%;text-align:center;line-height:22px;margin-left:4px;font-size:12px}table{border-collapse:collapse;font:14px ui-monospace,monospace}td{border:1px solid #999;padding:4px 10px}@media print{body{margin:0}}</style></head><body>
+<h1>${esc(s.name)}</h1><p class="meta">Simulado inédito no estilo ${esc(G.name)} · ${genLevel(G.level)[1]} · ${s.qn} questões · ${fmtHM((G.dur || s.dur) * 60)} de prova · criado no Memora</p>
+${qs}${essay}${sheet}${key}</body></html>`;
+}
+async function simDownload(s) {
+  const data = simPrintHTML(s); const filename = `simulado-${hnorm(s.name).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "memora"}.html`;
+  let dl = null; try { dl = window.claude?.use ? await window.claude.use("downloads") : null; } catch {}
+  if (dl) { try { await dl.save({ filename, data }); toast("Prova salva. Abra o arquivo e use Imprimir."); } catch (e) { if (e?.code !== "declined" && e?.code !== "cancelled") toast("Não deu para salvar o arquivo agora."); } return; }
+  try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type: "text/html" })); a.download = filename; a.click(); toast("Prova baixada"); } catch { toast("Não deu para baixar a prova aqui."); }
 }
 
 /* ---- Estatísticas ---- */
@@ -2490,7 +3038,7 @@ function purgeEntry(e, withFiles) {
   const simIds = e.kind === "sim" ? [d.id] : e.kind === "folder" ? (d.sims || []) : [];
   let n = 0;
   cardIds.forEach(id => { const c = CARDS[id]; if (c && c.deleted) { delete CARDS[id]; n += diffKind("card", [id]); } });
-  simIds.forEach(id => { const s = SIMS[id]; if (s && s.deleted) { const files = s.files || []; const rids = resIdsFor(id); rids.forEach(r => RES.delete(r)); delete SIMS[id]; n += diffKind("sim", [id]) + diffKind("res", rids); if (withFiles) delFiles(files); } });
+  simIds.forEach(id => { const s = SIMS[id]; if (s && s.deleted) { const files = s.files || []; const rids = resIdsFor(id), qids = qstIdsFor(id); rids.forEach(r => RES.delete(r)); qids.forEach(r => QSTM.delete(r)); delete SIMS[id]; n += diffKind("sim", [id]) + diffKind("res", rids) + diffKind("qst", qids); if (withFiles) delFiles(files); } });
   if (n) changedLocally(false);
 }
 async function delFiles(files) { if (!files || !files.length) return; const A = await getAssets(); if (!A) return; for (const f of files) { try { await A.delete(f.id); } catch {} } }
@@ -2765,6 +3313,7 @@ function simErrorCandidates(kinds, onlySim) {
   const have = new Set(S.errors.filter(e => e.source === "sim").map(e => e.sim + ":" + e.q));
   const out = [];
   liveSims().filter(s => !onlySim || s.id === onlySim).forEach(s => (s.q || []).forEach((x, i) => {
+    if (!x || x.an) return;
     const k = x.r === "e" ? "e" : x.r === "b" ? "b" : (x.g && x.r === "c") ? "g" : null;
     if (!k || !kinds.includes(k) || have.has(s.id + ":" + i)) return;
     out.push({ s, i, x, k });
@@ -2832,7 +3381,7 @@ function errToCard(e) {
       const ai = await getAI(); if (!ai) { msg.textContent = "A IA só funciona com o Memora aberto no Claude."; return; }
       b.disabled = true; msg.textContent = "Pensando…";
       try {
-        const prompt = `Crie UM flashcard de revisão para um estudante de vestibular que errou uma questão. Matéria: ${e.subject || "?"}. Assunto: ${e.topic || "?"}. Motivo do erro: ${errReason(e.reason) || "?"}. Anotação do estudante: ${e.note || "—"}. A frente deve ser uma pergunta autossuficiente sobre o conceito ou o passo que ele errou; o verso, a resposta correta e curta, com a pegadinha se houver. Português do Brasil, sem inventar dados. Responda SOMENTE com JSON: {"front": "...", "back": "..."}`;
+        const prompt = `Crie UM flashcard de revisão para um estudante de vestibular que errou uma questão. Matéria: ${e.subject || "?"}. Assunto: ${e.topic || "?"}. Motivo do erro: ${errReason(e.reason) || "?"}. Anotação do estudante: ${e.note || "—"}.${e.sim && SIMS[e.sim]?.q?.[e.q]?.qt ? ` A questão que ele errou:\n${genQText(SIMS[e.sim], e.q)}\n` : ""} A frente deve ser uma pergunta autossuficiente sobre o conceito ou o passo que ele errou; o verso, a resposta correta e curta, com a pegadinha se houver. Português do Brasil, sem inventar dados. Responda SOMENTE com JSON: {"front": "...", "back": "..."}`;
         const out = await ai.json(prompt, { modelTier: "quick" });
         if (out && out.front && out.back) { m.querySelector("#ecF").value = String(out.front); m.querySelector("#ecB").value = String(out.back); msg.textContent = "Sugestão pronta. Revise antes de salvar."; }
         else msg.textContent = "A IA não devolveu um cartão. Tente de novo.";
@@ -2857,7 +3406,7 @@ function errRow(e) {
     <div class="grow"><div class="t"><b>${esc(e.topic || "(sem assunto)")}</b> ${subjPill(e.subject)}${e.kind === "branco" ? ` <span class="pill">em branco</span>` : e.kind === "chute" ? ` <span class="pill">chute</span>` : ""}${e.reason && e.kind !== "chute" ? ` <span class="pill">${esc(errReason(e.reason))}</span>` : ""}</div>
     <div class="sub t">${src} · ${fmtDate(dkey(new Date(e.createdAt || Date.now())))}${e.reviewed ? " · revisado" : ""}${errHasCard(e) ? " · tem cartão" : ""}</div>
     ${e.note ? `<div class="t errnote">${esc(e.note)}</div>` : ""}
-    <div class="row" style="margin-top:6px"><button class="btn sm ${e.reviewed ? "" : "pri"}" data-eact="rev">${e.reviewed ? "Reabrir" : "Já revisei"}</button><button class="btn sm" data-eact="card">${errHasCard(e) ? "Criar outro cartão" : "Criar cartão"}</button>${sim ? `<button class="btn sm ghost" data-eact="open">Abrir simulado</button>` : ""}</div></div>
+    <div class="row" style="margin-top:6px"><button class="btn sm ${e.reviewed ? "" : "pri"}" data-eact="rev">${e.reviewed ? "Reabrir" : "Já revisei"}</button><button class="btn sm" data-eact="card">${errHasCard(e) ? "Criar outro cartão" : "Criar cartão"}</button>${sim && sim.q?.[e.q]?.qt && takeDone(sim) ? `<button class="btn sm ghost" data-eact="qv">Ver questão</button>` : ""}${sim ? `<button class="btn sm ghost" data-eact="open">Abrir simulado</button>` : ""}</div></div>
     <button class="icon-btn" data-eact="edit" aria-label="Editar">${ico("edit")}</button><button class="icon-btn" data-eact="del" aria-label="Excluir">${ico("trash")}</button></div>`;
 }
 VIEWS.erros = () => {
@@ -2906,6 +3455,7 @@ BIND.erros = v => {
       else if (a === "card") errToCard(e);
       else if (a === "edit") editError(e);
       else if (a === "open") { const s = SIMS[e.sim]; if (s && !s.deleted) { simFolder = s.folder; simOpen = s.id; go("simulados"); } }
+      else if (a === "qv") { const s = SIMS[e.sim]; if (s && !s.deleted) questionModal(s, e.q); }
       else if (a === "del") confirmBox("Excluir este erro do caderno?", "Excluir", () => { const t = trashAdd("error", e.topic || e.note || "Erro", e); S.errors = S.errors.filter(x => x !== e); commit("errors"); render(); afterDelete("Erro excluído", t); });
     });
   });
