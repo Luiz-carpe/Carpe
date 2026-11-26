@@ -134,6 +134,7 @@ textarea{resize:vertical;min-height:80px}
 .gcard{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
 .gcard textarea{min-height:60px;font-size:.88rem}
 .gcard.off{opacity:.45}
+.gcard.saved{grid-template-columns:1fr 1fr auto}
 .note{border-radius:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);font-size:.88rem}
 .note.warn{border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}
 .note.bad{border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
@@ -254,6 +255,7 @@ a.urg-u1,a.urg-u2,a.urg-u3,a.urg-u4,a.urg-u0{text-decoration:none;font-weight:60
 .tkalt,.tkn,.shl,.qnb{-webkit-tap-highlight-color:transparent}
 @media (hover:none){.tkhint{display:none}}
 .qnb{border:0;background:transparent;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0;font:inherit;text-align:left}
+@media (max-width:760px){.gcard.saved{grid-template-columns:1fr auto}.gcard.saved textarea:nth-of-type(2){grid-column:1/2}}
 .qrow.an{opacity:.55}.qrow.an .qn{text-decoration:line-through}
 .cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .nogrow .field{flex:none}
@@ -939,14 +941,14 @@ function overflowFor(doc, need) {
 let rerenderT = null, rerenderWanted = false;
 const typing = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
 function remoteChanged() {
-  applyTheme();
+  applyTheme(); if (aiJob() && !genBusy) aiJobSoon();
   clearTimeout(rerenderT);
   rerenderT = setTimeout(() => { if ($(".ov") || typing()) { rerenderWanted = true; renderNav(); } else { rerenderWanted = false; render(); } }, 150);
 }
 document.addEventListener("focusout", () => { if (rerenderWanted) setTimeout(() => { if (rerenderWanted && !$(".ov") && !typing()) { rerenderWanted = false; render(); } }, 500); });
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") { if (simTake) takePause(SIMS[simTake]); Store.flush(); Cloud.flush(); }
-  else { pomoCheck(); if (simTake && route === "simulados" && simOpen === simTake && SIMS[simTake]) { takeResume(SIMS[simTake]); takeClock(); } Cloud.flush(); if (Cloud.ready) touchDevice(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); }
+  if (document.visibilityState === "hidden") { if (simTake) takePause(SIMS[simTake]); aiJobAway(); Store.flush(); Cloud.flush(); }
+  else { pomoCheck(); aiJobBack(); if (simTake && route === "simulados" && simOpen === simTake && SIMS[simTake]) { takeResume(SIMS[simTake]); takeClock(); } Cloud.flush(); if (Cloud.ready) touchDevice(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); }
 });
 window.addEventListener("pagehide", () => { if (simTake) takePause(SIMS[simTake]); Store.flush(); });
 window.addEventListener("online", () => { Cloud.offline = false; Cloud.wait = 0; Cloud.flush(); if (Cloud.db && !Cloud.unsub && !Cloud.off) Cloud.listen(); });
@@ -954,6 +956,11 @@ setInterval(() => { if (pendingDocs().length) Cloud.flush(); }, 20000);
 try { Promise.resolve(navigator.storage?.persist?.()).catch(() => {}); } catch {}
 
 /* ---- aparelhos ligados à mesma conta ---- */
+function deviceList() {     // um item por aparelho (mesmo nome = mesmo aparelho), o mais recente
+  const by = new Map();
+  for (const [id, d] of Object.entries(DEVICES)) { const n = d.name || "Aparelho"; const cur = by.get(n); if (!cur || id === DEV || (cur.id !== DEV && (d.last || 0) > (cur.d.last || 0))) by.set(n, { id, d }); }
+  return [...by.values()].sort((a, b) => (b.id === DEV) - (a.id === DEV) || (b.d.last || 0) - (a.d.last || 0)).map(x => [x.id, x.d]);
+}
 function devName() {
   const ua = navigator.userAgent || ""; const touch = (navigator.maxTouchPoints || 0) > 1;
   const n = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch) ? "iPad" : /iPhone/.test(ua) ? "iPhone" : /Android/.test(ua) ? (/Mobile/.test(ua) ? "Celular Android" : "Tablet Android") : /Windows/.test(ua) ? "Computador Windows" : /Macintosh/.test(ua) ? "Mac" : /CrOS/.test(ua) ? "Chromebook" : /Linux/.test(ua) ? "Computador Linux" : "Aparelho";
@@ -964,10 +971,17 @@ function touchDevice(force) {
   const me = DEVICES[DEV]; const now = Date.now();
   if (!force && me && now - (me.last || 0) < 6 * 3600000 && me.name === devName()) return;
   DEVICES[DEV] = { name: devName(), first: (me && me.first) || now, last: now };
-  if (diffKind("dev", [DEV])) changedLocally(false);
+  const drop = [], perName = new Map();     // no iPad o app às vezes abre sem a memória local: guarda só os 3 registros mais novos de cada aparelho
+  Object.entries(DEVICES).filter(([id]) => id !== DEV).sort((a, b) => (b[1].last || 0) - (a[1].last || 0)).forEach(([id, d]) => {
+    const k = (perName.get(d.name) || 0) + 1; perName.set(d.name, k);
+    if (k > 3 || now - (d.last || 0) > 90 * 86400000) drop.push(id);
+  });
+  drop.forEach(id => { delete DEVICES[id]; });
+  if (diffKind("dev", [DEV, ...drop])) changedLocally(false);
 }
 function afterSync() {
   touchDevice();
+  aiJobSoon(1500);
   expireTrash();
   if (route === "dados") render();
 }
@@ -1727,7 +1741,8 @@ async function explainCard() {
 
 /* attachments */
 let ATT = []; // {id, kind:'image'|'text'|'pdf', name, blob?, url?, text?, pages?}
-let GEN = [];  // generated cards {front, back, tags, on}
+let GEN = [];  // ids dos cartões que a IA criou nesta visita (já salvos no baralho)
+let genRun = null, genHidden = false, genUserCancel = false, genEditT = null, aiJobT = null;
 let genBusy = null, aiForm = { prompt: "", count: 15, level: "vestibular", style: "misto", depth: "media", tier: "default", deck: "", newDeck: "" };
 async function addFiles(files) {
   for (const f of files) {
@@ -1782,8 +1797,11 @@ const iaGerarView = () => {
     <label class="field" id="aiNewDeckF" ${f.deck ? "hidden" : ""}><span>Nome do novo baralho</span><input type="text" id="aiNewDeck" value="${esc(f.newDeck)}" placeholder="Definido pela IA se vazio"></label></div>
     <label class="field"><span>Qualidade</span><select id="aiTier"><option value="quick" ${f.tier === "quick" ? "selected" : ""}>Rápida</option><option value="default" ${f.tier === "default" ? "selected" : ""}>Equilibrada</option><option value="complex" ${f.tier === "complex" ? "selected" : ""}>Máxima (mais lenta)</option></select></label>
     <div class="row end" style="margin-top:auto">${genBusy ? `<span class="spin"></span><span class="sub" id="genProg">Gerando…</span><button class="btn" id="aiCancel">Cancelar</button>` : `<button class="btn" id="aiWeak">Reforçar meus pontos fracos</button><button class="btn pri" id="aiGo">${ico("ia")}Gerar cartões</button>`}</div></div></div>
-  ${GEN.length ? `<div class="card"><div class="ttl"><h2>3. Revise e salve (${GEN.filter(g => g.on).length} de ${GEN.length} selecionados)</h2><div class="row"><button class="btn sm ghost" id="genAll">Marcar todos</button><button class="btn sm ghost danger" id="genClear">Descartar</button><button class="btn pri" id="genSave">Salvar cartões</button></div></div>
-    <div class="gen">${GEN.map((g, i) => `<div class="gcard ${g.on ? "" : "off"}" data-g="${i}"><button class="chk ${g.on ? "on" : ""}" data-gt aria-label="Incluir"></button><textarea data-gf="front" aria-label="Frente">${esc(g.front)}</textarea><textarea data-gf="back" aria-label="Verso">${esc(g.back)}</textarea><button class="icon-btn" data-gd aria-label="Remover">${ico("trash")}</button></div>`).join("")}</div></div>` : ""}`;
+  ${(() => { const gl = GEN.map(id => CARDS[id]).filter(c => c && !c.deleted); if (!gl.length) return "";
+    const dn = [...new Set(gl.map(c => S.decks.find(d => d.id === c.deck)?.name).filter(Boolean))];
+    return `<div class="card"><div class="ttl"><h2>3. Criados agora · ${gl.length} ${gl.length > 1 ? "cartões já salvos" : "cartão já salvo"}${dn.length ? ` em ${esc(dn.map(n => `"${n}"`).join(", "))}` : ""}</h2><div class="row"><button class="btn sm pri" id="genStudy">Estudar agora</button><button class="btn sm ghost danger" id="genUndo">Apagar ${gl.length > 1 ? `estes ${gl.length}` : "este"}</button><button class="btn sm ghost" id="genHide">Fechar lista</button></div></div>
+    <p class="sub" style="margin:0 0 8px">Tudo já está salvo no baralho e na nuvem, mesmo que você saia do app. Se quiser, ajuste o texto aqui mesmo ou apague o que não servir.</p>
+    <div class="gen">${gl.map(c => `<div class="gcard saved" data-g="${esc(c.id)}"><textarea data-gf="front" aria-label="Frente">${esc(c.front)}</textarea><textarea data-gf="back" aria-label="Verso">${esc(c.back)}</textarea><button class="icon-btn" data-gd aria-label="Apagar este cartão">${ico("trash")}</button></div>`).join("")}</div></div>`; })()}`;
 };
 const bindGerar = v => {
   renderAtt();
@@ -1799,14 +1817,20 @@ const bindGerar = v => {
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
   const go1 = $("#aiGo"); if (go1) go1.onclick = () => { sync(); generate(); };
   const wk = $("#aiWeak"); if (wk) wk.onclick = () => { sync(); generate(true); };
-  const cc = $("#aiCancel"); if (cc) cc.onclick = () => genBusy?.abort();
-  v.querySelectorAll("[data-g]").forEach(row => { const g = GEN[+row.dataset.g];
-    row.querySelector("[data-gt]").onclick = () => { g.on = !g.on; render(); };
-    row.querySelector("[data-gd]").onclick = () => { GEN.splice(+row.dataset.g, 1); render(); };
-    row.querySelectorAll("[data-gf]").forEach(t => t.oninput = () => g[t.dataset.gf] = t.value); });
-  const ga = $("#genAll"); if (ga) ga.onclick = () => { GEN.forEach(g => g.on = true); render(); };
-  const gc = $("#genClear"); if (gc) gc.onclick = () => confirmBox("Descartar os cartões gerados?", "Descartar", () => { GEN = []; render(); });
-  const gs = $("#genSave"); if (gs) gs.onclick = saveGenerated;
+  const cc = $("#aiCancel"); if (cc) cc.onclick = () => { genUserCancel = true; genBusy?.abort(); };
+  v.querySelectorAll(".gcard[data-g]").forEach(row => { const c = CARDS[row.dataset.g]; if (!c) return;
+    row.querySelectorAll("[data-gf]").forEach(t => {
+      t.oninput = () => { if (!t.value.trim()) return; c[t.dataset.gf] = t.value; clearTimeout(genEditT); genEditT = setTimeout(() => commitCard(c), 600); };
+      t.onblur = () => { clearTimeout(genEditT); if (t.value.trim() && t.value !== c[t.dataset.gf]) c[t.dataset.gf] = t.value; commitCard(c); };
+    });
+    row.querySelector("[data-gd]").onclick = () => { const e = trashAdd("card", c.front.slice(0, 90), { id: c.id }); c.deleted = true; commitCard(c); render(); afterDelete("Cartão apagado", e); };   // continua na lista: desfazer traz de volta
+  });
+  const genLive = () => GEN.filter(id => CARDS[id] && !CARDS[id].deleted);
+  const gu = $("#genUndo"); if (gu) gu.onclick = () => { const ids = genLive(); confirmBox(`Apagar ${ids.length > 1 ? `os ${ids.length} cartões criados agora` : "o cartão criado agora"}? Eles vão para a lixeira.`, "Apagar", () => {
+    const e = trashAdd("cards", `${ids.length} cartões criados pela IA`, { ids }); ids.forEach(id => { CARDS[id].deleted = true; CARDS[id].updatedAt = Date.now(); });
+    if (diffKind("card", ids)) changedLocally(); GEN = []; render(); afterDelete("Cartões apagados", e); }); };
+  const gst = $("#genStudy"); if (gst) gst.onclick = () => { const ids = genLive(); startStudy(CARDS[ids[0]]?.deck || null, ids); };
+  const gh = $("#genHide"); if (gh) gh.onclick = () => { GEN = []; render(); };
   showAINote();
 };
 async function showAINote() {
@@ -1817,9 +1841,10 @@ async function showAINote() {
 const LEVELS = { basico: "ensino médio básico", vestibular: "vestibular tradicional (ENEM, Fuvest, Unicamp)", medicina: "vestibular de Medicina, alto nível de exigência, com pegadinhas", superior: "ensino superior" };
 const STYLES = { misto: "misture pergunta direta, lacuna, aplicação e conceito", pergunta: "pergunta direta e resposta", lacuna: "frase com lacuna ____ na frente e o termo faltante no verso", conceito: "termo/conceito na frente e definição no verso", aplicacao: "situação-problema ou caso aplicado na frente e resolução no verso", vf: "afirmação para julgar como V ou F na frente e o gabarito justificado no verso" };
 const DEPTH = { curta: "resposta curta e objetiva (até 1 frase)", media: "resposta com uma explicação breve (1 a 3 frases)", longa: "resposta com explicação aprofundada (até 6 frases), incluindo o porquê" };
-async function generate(weak = false) {
+async function generate(weak = false, resume = null) {
+  if (genBusy) return toast("Já tem cartões sendo criados. Espere terminar.");
   const ai = await getAI(); if (!ai) return toast("Abra o Memora no Claude para usar a IA");
-  const f = aiForm;
+  const f = resume ? { ...aiForm, ...resume.form } : aiForm;
   const imgs = []; ATT.forEach(a => { if (a.kind === "image") imgs.push(a.blob); if (a.kind === "pdf") imgs.push(...a.pages); });
   if (ATT.some(a => a.kind === "pdf" && a.status === "lendo…")) return toast("Aguarde terminar a leitura do PDF");
   const maxImg = AIcaps?.images?.maxCount || 0;
@@ -1842,24 +1867,76 @@ ${weakTxt}
 ${material ? `Material anexado:\n"""${material}"""` : ""}
 ${existing ? `Já existem estes cartões no baralho; não os repita:\n${existing}` : ""}
 Responda SOMENTE com JSON neste formato: {"deckName": "nome curto sugerido para o baralho", "subject": "matéria (ex.: Química)", "cards": [{"front": "...", "back": "...", "tags": ["assunto"]}]}`;
-  genBusy = new AbortController(); render();
+  const job = resume ? Object.assign(resume, { run: uid(), dev: DEV, at: Date.now(), tries: (resume.tries || 1) + 1 })
+    : { id: uid(), run: uid(), dev: DEV, at: Date.now(), tries: 1, weak: !!weak, files: ATT.map(a => a.name).slice(0, 10),
+        form: { prompt: f.prompt.slice(0, 4000), count: f.count, level: f.level, style: f.style, depth: f.depth, tier: f.tier, deck: f.deck, newDeck: f.newDeck } };
+  delete job.away;
+  aiJobSet(job);            // o pedido fica na nuvem: se o app fechar no meio, ele continua quando o aluno voltar
+  genBusy = new AbortController(); genRun = job.run; genHidden = document.visibilityState === "hidden"; genUserCancel = false;
+  if (route === "ia") render(); else renderNav();
+  let retry = false;
   try {
     const out = await ai.json(prompt, { images: useImgs.length ? useImgs : undefined, modelTier: f.tier, signal: genBusy.signal, onText: ({ text }) => { const p = $("#genProg"); if (p) p.textContent = `Gerando… ${(text.match(/"front"/g) || []).length} cartões`; } });
     const cards = (out?.cards || []).filter(c => c && c.front && c.back);
     if (!cards.length) throw { code: "empty" };
-    GEN = [...GEN, ...cards.map(c => ({ front: String(c.front), back: String(c.back), tags: Array.isArray(c.tags) ? c.tags.map(String).slice(0, 5) : [], on: true }))];
-    if (!f.deck && !f.newDeck) aiForm.newDeck = out.deckName || "";
-    aiForm.subject = out.subject || "";
-    if (imgs.length > useImgs.length) toast(`Só ${useImgs.length} imagens por vez foram usadas`); else toast(`${cards.length} cartões gerados. Revise e salve.`);
-  } catch (e) { if (e?.code !== "cancelled") toast(e?.code === "empty" ? "A IA não devolveu cartões. Reformule o pedido." : aiErr(e)); }
-  genBusy = null; render();
+    if (aiJob()?.run !== job.run) toast("Esses cartões já foram criados em outro aparelho.");   // outro aparelho assumiu este pedido
+    else {
+      const deck = genDeckFor(f, out);
+      const made = cards.slice(0, 80).map(c => newCard(deck.id, String(c.front).trim(), String(c.back).trim(), Array.isArray(c.tags) ? c.tags.map(String).slice(0, 5) : [], "ia"));
+      made.forEach(c => { capCard(c); CARDS[c.id] = c; });
+      if (diffKind("card", made.map(c => c.id))) changedLocally();      // salvos na hora, no aparelho e na nuvem
+      GEN = [...made.map(c => c.id), ...GEN];
+      if (aiForm === f || resume) { aiForm.deck = deck.id; aiForm.newDeck = ""; }
+      aiJobSet(null); Cloud.flush();
+      toast(`${made.length} cartões salvos em "${deck.name}"${imgs.length > useImgs.length ? ` · só ${useImgs.length} imagens foram usadas` : ""}`);
+    }
+  } catch (e) {
+    const code = e?.code; const mine = aiJob()?.run === job.run;
+    const fatal = ["refused", "not_granted", "sampling_disabled", "prompt_too_large", "images_unavailable", "image_rejected", "not_declared", "empty", "invalid_json", "empty_completion", "rate_limited", "session_expired", "capability_disabled", "capability_removed"].includes(code);
+    if (!mine) { /* outro aparelho cuida deste pedido */ }
+    else if (!genUserCancel && genHidden && !fatal) retry = true;           // o app foi para o fundo no meio do pedido: refaz quando ele voltar
+    else { aiJobSet(null); if (code !== "cancelled") toast(code === "empty" ? "A IA não devolveu cartões. Reformule o pedido." : aiErr(e)); }
+  }
+  genBusy = null; genRun = null;
+  if (route === "ia") softRender(); else renderNav();
+  if (retry && document.visibilityState === "visible") aiJobSoon(1200);
 }
-function saveGenerated() {
-  const sel = GEN.filter(g => g.on && g.front.trim() && g.back.trim()); if (!sel.length) return toast("Selecione ao menos um cartão");
-  let deck = S.decks.find(d => d.id === aiForm.deck);
-  if (!deck) { const subj = (aiForm.subject || "").trim(); if (subj) ensureSubject(subj); deck = { id: uid(), name: (aiForm.newDeck || "").trim() || "Gerado pela IA", subject: subj, createdAt: Date.now() }; S.decks.push(deck); commit("decks"); aiForm.deck = deck.id; }
-  sel.forEach(g => commitCard(newCard(deck.id, g.front.trim(), g.back.trim(), g.tags, "ia")));
-  GEN = GEN.filter(g => !g.on); toast(`${sel.length} cartões salvos em "${deck.name}"`); render();
+const aiJob = () => isPlain(S.settings.aiJob) ? S.settings.aiJob : null;
+function aiJobSet(j) { if (j) S.settings.aiJob = j; else delete S.settings.aiJob; commit("settings"); }
+function aiJobSoon(ms = 1000) { clearTimeout(aiJobT); aiJobT = setTimeout(aiJobCheck, ms); }
+/* pedido de cartões que ficou pela metade (no iPad o app recarrega quando você sai dele): continua sozinho */
+function aiJobCheck() {
+  const j = aiJob(); if (!j || genBusy) return;
+  const now = Date.now(); const age = now - (j.at || 0);
+  if (age > 12 * 3600000) return aiJobSet(null);                       // pedido muito antigo: esquece
+  if (j.dev !== DEV) {                                                  // começou em outro aparelho (ou nesta mesma tela antes de recarregar)
+    const free = (j.away && now - j.away > 10000) || age > 3 * 60000;
+    if (!free) return aiJobSoon(Math.max(1000, Math.min(j.away ? j.away + 10500 - now : Infinity, (j.at || 0) + 3 * 60000 + 500 - now)));
+  }
+  if ((j.tries || 1) >= 3) { aiJobSet(null); return toast("A criação dos cartões não terminou depois de 3 tentativas. Peça de novo em Memora IA."); }
+  aiForm = { ...aiForm, ...(j.form || {}) };
+  const files = Array.isArray(j.files) ? j.files : [];
+  if (files.length && !(j.dev === DEV && files.every(n => ATT.some(a => a.name === n)))) {   // os anexos não ficam guardados: pede para anexar de novo
+    aiJobSet(null); if (route === "ia") render();
+    return toast(`A criação dos cartões parou quando você saiu do app. Anexe de novo ${files.length > 1 ? "os arquivos" : `"${files[0]}"`} em Memora IA e toque em Gerar cartões.`);
+  }
+  toast(`Continuando a criação de ${j.form?.count || ""} cartões que parou quando você saiu do app`.replace("de  cartões", "dos cartões"));
+  generate(!!j.weak, j);
+}
+function aiJobAway() { if (!genBusy || !genRun) return; genHidden = true; const j = aiJob(); if (j && j.run === genRun && !j.away) { j.away = Date.now(); commit("settings"); } }
+function aiJobBack() {
+  if (genBusy && genRun) { const j = aiJob(); if (!j || j.run !== genRun) genBusy.abort(); else if (j.away) { delete j.away; commit("settings"); } }
+  else aiJobSoon(800);
+}
+/* baralho dos cartões gerados: o escolhido; senão um novo, ou o que já existe com o mesmo nome */
+function genDeckFor(f, out) {
+  let deck = S.decks.find(d => d.id === f.deck);
+  if (!deck) {
+    const name = ((f.newDeck || "").trim() || String(out?.deckName || "").trim() || "Gerado pela IA").slice(0, 80);
+    deck = S.decks.find(d => hnorm(d.name) === hnorm(name));
+    if (!deck) { const subj = String(out?.subject || "").trim().slice(0, 60); if (subj) ensureSubject(subj); deck = { id: uid(), name, subject: subj, createdAt: Date.now() }; S.decks.push(deck); commit("decks"); }
+  }
+  return deck;
 }
 async function aiPlanner() {
   const ai = await getAI(); if (!ai) return toast("Abra o Memora no Claude para usar a IA");
@@ -2805,7 +2882,7 @@ const fmtBytes = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") 
 const agoTxt = t => { if (!t) return "—"; const s = (Date.now() - t) / 1000; return s < 90 ? "agora" : s < 3600 ? `há ${Math.round(s / 60)} min` : s < 86400 ? `há ${Math.round(s / 3600)} h` : `há ${Math.round(s / 86400)} dia${s >= 172800 ? "s" : ""}`; };
 const cloudUsage = () => { let b = 0; for (const v of RSIZE.values()) b += v; return { docs: REMOTE.size, bytes: b }; };
 VIEWS.dados = () => {
-  const devs = Object.entries(DEVICES).sort((a, b) => (b[1].last || 0) - (a[1].last || 0));
+  const devs = deviceList();
   const us = cloudUsage();
   return `<div class="head"><div><h1>Dados, matérias e aparência</h1><p>Tudo o que você faz no Memora é salvo sozinho, na hora, na nuvem da sua conta Claude, e aparece em todos os aparelhos em que você abrir o Memora com a mesma conta. Não precisa fazer backup.</p></div></div>
   <div class="grid g2">
@@ -2890,7 +2967,7 @@ function importBackupText(txt) {
 
 /* ============ lixeira (30 dias), desfazer e lembrete de backup ============ */
 const TRASH_DAYS = 30;
-const TRASH_KINDS = { task: "Pendência", tasks: "Pendências concluídas", session: "Sessão de estudo", exam: "Prova", etask: "Tarefa da prova", block: "Bloco de horário", subject: "Matéria", deck: "Baralho", card: "Cartão", sim: "Simulado", folder: "Pasta de simulados", error: "Erro do caderno", essay: "Redação" };
+const TRASH_KINDS = { task: "Pendência", tasks: "Pendências concluídas", session: "Sessão de estudo", exam: "Prova", etask: "Tarefa da prova", block: "Bloco de horário", subject: "Matéria", deck: "Baralho", card: "Cartão", cards: "Cartões", sim: "Simulado", folder: "Pasta de simulados", error: "Erro do caderno", essay: "Redação" };
 /* cópia segura de uma pendência: se estava contando tempo, congela o tempo acumulado */
 const trashTaskCopy = t => Object.assign(clone(t), { work: taskSec(t), runStart: 0, status: t.status === "doing" ? "todo" : t.status });
 function trashAdd(kind, label, data) {
@@ -2923,6 +3000,13 @@ function trashRestore(e) {
       if (!S.decks.some(x => x.id === d.deck.id)) S.decks.push(d.deck);
       (d.cards || []).forEach(id => { const c = CARDS[id]; if (c && c.deleted) { c.deleted = false; commitCard(c); } });
       commit("decks"); break;
+    }
+    case "cards": {
+      const ids = (d.ids || []).filter(id => CARDS[id] && CARDS[id].deleted); if (!ids.length) return fail("Esses cartões não existem mais.");
+      ids.forEach(id => { const c = CARDS[id];
+        if (!S.decks.some(x => x.id === c.deck)) { let dk = S.decks.find(x => x.name === "Cartões restaurados"); if (!dk) { dk = { id: uid(), name: "Cartões restaurados", subject: "", createdAt: Date.now() }; S.decks.push(dk); commit("decks"); } c.deck = dk.id; }
+        c.deleted = false; c.updatedAt = Date.now(); });
+      if (diffKind("card", ids)) changedLocally(); break;
     }
     case "card": {
       const c = CARDS[d.id]; if (!c) return fail("Esse cartão não existe mais.");
@@ -3034,7 +3118,7 @@ function expireTrash() {
 }
 function purgeEntry(e, withFiles) {
   const d = e.data || {};
-  const cardIds = e.kind === "card" ? [d.id] : e.kind === "deck" ? (d.cards || []) : [];
+  const cardIds = e.kind === "card" ? [d.id] : e.kind === "deck" ? (d.cards || []) : e.kind === "cards" ? (d.ids || []) : [];
   const simIds = e.kind === "sim" ? [d.id] : e.kind === "folder" ? (d.sims || []) : [];
   let n = 0;
   cardIds.forEach(id => { const c = CARDS[id]; if (c && c.deleted) { delete CARDS[id]; n += diffKind("card", [id]); } });
@@ -3592,6 +3676,7 @@ const BOOT_AT = Date.now();
   setInterval(tick, 1000);
   setInterval(() => { if (route === "painel" || route === "flashcards") renderNav(); }, 60000);
   Cloud.init();
+  setTimeout(() => { if (!Cloud.ready) aiJobSoon(0); }, 8000);   // sem nuvem: confere o pedido guardado neste aparelho
 })();
 </script>
 

@@ -176,19 +176,20 @@ async function walkthrough(dev, files) {
   });
 
   section(tag + "Memora IA (com fotos e PDF)");
-  await step("gerar com foto", async () => {
+  await step("gerar com foto: os cartões já ficam salvos", async () => {
     await u.go("ia");
     await u.fill("#aiPrompt", "Crie cartões de equilíbrio iônico"); await u.fill("#aiCount", "6");
     await dev.app.locator("#aiFile").setInputFiles([{ name: "foto.png", mimeType: "image/png", buffer: files.png }, { name: "scan.bmp", mimeType: "image/bmp", buffer: files.bmp }]);
     await u.waitFor(() => ATT.length === 2);
     await u.tap("#aiGo");
-    await u.waitFor(() => GEN.length === 6, null, 10000);
+    await u.waitFor(() => !genBusy && GEN.length === 6, null, 10000);
     const call = dev.cloud.aiCalls.filter(c => c.page === dev.name).pop();
     ok(call && call.images.length === 2 && call.images.every(i => ["image/png", "image/jpeg"].includes(i.type)), "a IA recebeu as 2 fotos (a BMP foi convertida para JPEG)");
-    await u.tap('[data-g="0"] [data-gt]');
-    await u.st(() => { const t = document.querySelector('[data-g="1"] [data-gf="front"]'); t.value = "Pergunta editada"; t.dispatchEvent(new Event("input")); });
-    await u.tap("#genSave");
-    ok(await u.st(() => { const dk = S.decks.find(d => d.name === "Equilíbrio iônico"); return dk && deckCards(dk.id).length === 5 && deckCards(dk.id).some(c => c.front === "Pergunta editada"); }), "5 cartões salvos (1 desmarcado, 1 editado) em baralho novo");
+    ok(await u.st(() => { const dk = S.decks.find(d => d.name === "Equilíbrio iônico"); return dk && deckCards(dk.id).length === 6 && !document.querySelector("#genSave"); }), "6 cartões salvos sozinhos em baralho novo, sem botão Salvar");
+    await u.st(() => { const t = document.querySelector('.gen .gcard:nth-child(2) [data-gf="front"]'); t.value = "Pergunta editada"; t.dispatchEvent(new Event("input")); t.dispatchEvent(new Event("blur")); });
+    await u.tap(".gen .gcard:nth-child(1) [data-gd]");
+    ok(await u.st(() => { const dk = S.decks.find(d => d.name === "Equilíbrio iônico"); return dk && deckCards(dk.id).length === 5 && deckCards(dk.id).some(c => c.front === "Pergunta editada"); }), "5 cartões no baralho (1 apagado e 1 editado na lista)");
+    await u.tap("#genHide");
   });
   await step("gerar a partir de PDF", async () => {
     await dev.app.locator("#aiFile").setInputFiles([{ name: "apostila.pdf", mimeType: "application/pdf", buffer: files.pdf }]);
@@ -197,12 +198,15 @@ async function walkthrough(dev, files) {
     await u.tap("#aiGo"); await u.waitFor(() => !genBusy && GEN.length > 0, null, 10000);
     const call = dev.cloud.aiCalls.filter(c => c.page === dev.name).pop();
     ok(call && /Henderson-Hasselbalch/.test(call.prompt), "texto do PDF foi enviado para a IA");
-    await u.tap("#genClear"); await u.ok();
+    await u.tap("#genUndo"); await u.ok();
+    ok(await u.st(() => { const dk = S.decks.find(d => d.name === "Equilíbrio iônico"); return deckCards(dk.id).length === 5 && GEN.length === 0; }), "Apagar estes cartões tira só os que acabaram de ser criados");
   });
   await step("reforçar pontos fracos", async () => {
-    await u.tap("#aiWeak"); await u.waitFor(() => !genBusy, null, 10000);
-    const call = dev.cloud.aiCalls.filter(c => c.page === dev.name).pop();
+    const n0 = dev.cloud.aiCalls.length;
+    await u.tap("#aiWeak"); await u.waitFor(n0 => !genBusy && GEN.length > 0, n0, 10000);
+    const call = dev.cloud.aiCalls.slice(n0).pop();
     ok(call && /erra repetidamente/.test(call.prompt), "pedido inclui os cartões que você mais erra");
+    await u.tap("#genUndo"); await u.ok();
     await u.st(() => { GEN = []; render(); });
   });
   await step("importar planilha", async () => {

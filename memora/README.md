@@ -16,7 +16,7 @@ https://claude.ai/artifact/464ZVG7AE2rmrE9AqHwnCr
 cd memora/testes
 npm install
 npx playwright install chromium   # só se o Chromium do Playwright ainda não estiver instalado
-node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar
+node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar | cartoes
 ```
 
 ## Simulados inéditos com IA
@@ -40,6 +40,17 @@ e arquivo HTML para imprimir com folha de respostas e gabarito.
 
 As questões ficam em blocos próprios na nuvem (`qst.<simulado>.<n>`, 10 por bloco), separados do simulado. Um
 ENEM completo, com 180 questões e redação, ocupa 18 blocos de cerca de 25 KB.
+
+## Cartões criados pela IA
+
+Os cartões que a IA cria vão direto para o baralho, e para a nuvem, assim que chegam. A lista "Criados agora"
+serve só para ajustar, apagar (um ou todos, com desfazer) ou estudar. Se a IA sugerir um baralho com o nome de
+um que já existe, os cartões entram nele.
+
+O pedido em andamento também fica guardado na nuvem. Se o app fechar no meio (no iPad isso acontece ao sair dele,
+e o Memora reabre do zero), a criação continua sozinha quando o aluno volta. Se outro aparelho assumir o pedido,
+o primeiro não salva os mesmos cartões de novo. Pedidos com fotos ou PDF pedem para anexar de novo, porque os
+arquivos não ficam guardados.
 
 ## Como os dados são salvos
 
