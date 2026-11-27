@@ -112,6 +112,14 @@ async function scenarioCartoes(browser) {
     ok(n[0] === 120 && n[1] === 120, `quando o computador volta, ele não salva de novo (${n.join(" e ")} cartões)`);
   });
 
+  await step("se dois aparelhos chegarem a salvar o mesmo pedido, fica uma cópia só", async () => {
+    const mk = (dev, run) => ev(dev, run => { const list = Array.from({ length: 5 }, (_, i) => Object.assign(newCard("dk-bio", `Duplicado ${i}`, "x", [], "ia"), { job: "job-x", run })); list.forEach(c => { CARDS[c.id] = c; }); if (diffKind("card", list.map(c => c.id))) changedLocally(); }, run);
+    await mk(B, "run-b"); await mk(C, "run-a");
+    await settle([B, C]); await sleep(1500); await settle([B, C]);
+    const r = await Promise.all([B, C].map(d => ev(d, () => { const l = liveCards().filter(c => c.job === "job-x"); return l.length + ":" + [...new Set(l.map(c => c.run))].join(); })));
+    ok(r[0] === "5:run-a" && r[1] === "5:run-a", "os dois aparelhos ficam com os mesmos 5 cartões: " + r.join(" e "));
+  });
+
   section("aparelhos sem repetição");
   await step("cada aparelho aparece uma vez em Dados", async () => {
     R.dev = B;

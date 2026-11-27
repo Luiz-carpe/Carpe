@@ -112,6 +112,15 @@ textarea{resize:vertical;min-height:80px}
 /* flashcards */
 .deck{display:flex;flex-direction:column;gap:10px}
 .deck .nums{display:flex;gap:12px;font-size:.82rem}
+.dname{display:flex;gap:8px;align-items:center;overflow-wrap:anywhere;min-width:0}.dname svg{width:20px;height:20px;flex:none;color:var(--accent)}
+.subs{display:flex;flex-wrap:wrap;gap:6px}
+.subchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--panel2);color:var(--fg);border-radius:999px;padding:5px 11px;font-weight:600;font-size:.8rem;font-family:inherit;cursor:pointer;min-height:32px;-webkit-tap-highlight-color:transparent}
+.subchip:hover{border-color:var(--accent)}.subchip .sub{font-weight:500}
+.dico svg{width:20px;height:20px;color:var(--accent);display:block}
+.crumb{color:var(--muted);font-weight:600}
+.selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;position:sticky;top:8px;z-index:4}
+.selbar select{width:auto;max-width:100%}
+.item.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
 .n-new{color:var(--info)} .n-due{color:var(--ok)} .n-lrn{color:var(--bad)}
 .study{max-width:720px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:14px}
 .fc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px 24px;min-height:240px;display:flex;flex-direction:column;gap:16px;justify-content:center}
@@ -328,6 +337,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch
 const clone = o => JSON.parse(JSON.stringify(o ?? null));
 const PALETTE = ["#f0a948", "#6aa7ff", "#4cc38a", "#ef6b6b", "#b49cff", "#3fc9a5", "#ff7f66", "#e8d25a", "#5ec8e5", "#d58bd8"];
 const ICON = {
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   painel: '<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
   pendencias: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   tempo: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',
@@ -941,7 +951,7 @@ function overflowFor(doc, need) {
 let rerenderT = null, rerenderWanted = false;
 const typing = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
 function remoteChanged() {
-  applyTheme(); if (aiJob() && !genBusy) aiJobSoon();
+  applyTheme(); if (aiJob() && !genBusy) aiJobSoon(); dedupeJobs();
   clearTimeout(rerenderT);
   rerenderT = setTimeout(() => { if ($(".ov") || typing()) { rerenderWanted = true; renderNav(); } else { rerenderWanted = false; render(); } }, 150);
 }
@@ -1138,6 +1148,7 @@ document.addEventListener("click", e => {
   if (!ROUTES.some(x => x[0] === r)) return;
   e.preventDefault(); if (r !== route) studyState = null; go(r);
 });
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href="#flashcards"]'); if (a && route === "flashcards" && !studyState && fcDeck) { fcDeck = null; fcSearch = ""; fcSel = null; render(); window.scrollTo(0, 0); } });
 window.addEventListener("hashchange", () => { let r = (location.hash.slice(1) || "painel"); if (!ROUTES.some(x => x[0] === r)) r = "painel"; if (r === route) return; route = r; studyState = null; render(); window.scrollTo(0, 0); });
 /* no celular: barra inferior com as abas principais e um botão "Mais" para as outras */
 const MOB = ["painel", "pendencias", "tempo", "flashcards"];
@@ -1234,8 +1245,23 @@ function beep() {
 /* ============ spaced repetition ============ */
 const liveCards = () => Object.values(CARDS).filter(c => !c.deleted);
 const deckCards = id => liveCards().filter(c => c.deck === id);
-function dueCards(deck) { const now = Date.now(); return liveCards().filter(c => (!deck || c.deck === deck) && c.reps > 0 && c.due <= now || (!deck || c.deck === deck) && c.lapses > 0 && c.reps === 0 && c.due <= now); }
-const newCards = deck => liveCards().filter(c => (!deck || c.deck === deck) && c.reps === 0 && !c.lapses);
+/* pastas e subpastas: uma subpasta é um baralho com "parent" = id da pasta principal (só dois níveis) */
+const deckById = id => S.decks.find(d => d.id === id);
+const hasLiveParent = d => !!(d && d.parent && d.parent !== d.id && deckById(d.parent));
+const deckParentOf = d => { if (!hasLiveParent(d)) return null; const p = deckById(d.parent); return hasLiveParent(p) ? null : p; };   // pai sumido ou encadeado: vira pasta principal
+const topDecks = () => S.decks.filter(d => !deckParentOf(d));
+const subDecks = id => S.decks.filter(d => deckParentOf(d)?.id === id).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+const deckTree = id => [id, ...subDecks(id).map(d => d.id)];
+const treeCards = id => { const ids = new Set(deckTree(id)); return liveCards().filter(c => ids.has(c.deck)); };
+const deckPath = id => { const d = deckById(id); if (!d) return ""; const p = deckParentOf(d); return p ? `${p.name} › ${d.name}` : d.name; };
+const nCards = n => `${n} ${n === 1 ? "cartão" : "cartões"}`;
+const nNew = n => `${n} ${n === 1 ? "novo" : "novos"}`;
+function deckOptions(sel, o = {}) {      // cada pasta seguida das suas subpastas
+  return topDecks().flatMap(d => o.topOnly ? [d] : [d, ...subDecks(d.id)]).filter(d => !(o.skip || []).includes(d.id))
+    .map(d => `<option value="${esc(d.id)}" ${d.id === sel ? "selected" : ""}>${esc(deckPath(d.id))}</option>`).join("");
+}
+function dueCards(deck) { const now = Date.now(); const ids = deck ? new Set(deckTree(deck)) : null; return liveCards().filter(c => (!ids || ids.has(c.deck)) && (c.reps > 0 && c.due <= now || c.lapses > 0 && c.reps === 0 && c.due <= now)); }
+const newCards = deck => { const ids = deck ? new Set(deckTree(deck)) : null; return liveCards().filter(c => (!ids || ids.has(c.deck)) && c.reps === 0 && !c.lapses); };
 function newCard(deck, front, back, tags = [], source = "manual") {
   return { id: uid(), deck, front, back, tags, source, ease: 2.5, ivl: 0, reps: 0, lapses: 0, due: Date.now(), ok: 0, bad: 0, hist: [], createdAt: Date.now(), updatedAt: Date.now() };
 }
@@ -1561,19 +1587,20 @@ function editBlock(b) {
 }
 
 /* ---- Flashcards ---- */
-let studyState = null, fcDeck = null, fcSearch = "";
+let studyState = null, fcDeck = null, fcSearch = "", fcSel = null;
 VIEWS.flashcards = () => {
   if (studyState) return studyView();
   if (fcDeck) return deckView();
-  const decks = S.decks;
+  const decks = topDecks();
   return `<div class="head"><div><h1>Flashcards</h1><p>${liveCards().length} cartões · ${dueCards().length} para revisar · ${newCards().length} novos</p></div>
-  <div class="row"><button class="btn" data-go="ia">${ico("ia")}Criar com IA</button><button class="btn" id="impFc">Importar planilha</button><button class="btn" id="newDeck">${ico("plus")}Novo baralho</button><button class="btn pri" id="studyAll" ${dueCards().length + newCards().length ? "" : "disabled"}>Estudar tudo</button></div></div>
-  ${decks.length ? `<div class="grid g3">${decks.map(d => { const c = deckCards(d.id); const due = dueCards(d.id).length, nw = newCards(d.id).length; const acc = c.reduce((a, x) => a + x.ok, 0), tot = c.reduce((a, x) => a + x.ok + x.bad, 0);
-    return `<div class="card deck" data-deck="${d.id}"><div class="ttl" style="margin:0"><h2 style="overflow-wrap:anywhere">${esc(d.name)}</h2>${subjPill(d.subject)}</div>
-    <div class="nums"><span class="n-due">${due} revisar</span><span class="n-new">${nw} novos</span><span class="sub">${c.length} total</span></div>
+  <div class="row"><button class="btn" data-go="ia">${ico("ia")}Criar com IA</button><button class="btn" id="impFc">Importar planilha</button><button class="btn" id="newDeck">${ico("plus")}Nova pasta</button><button class="btn pri" id="studyAll" ${dueCards().length + newCards().length ? "" : "disabled"}>Estudar tudo</button></div></div>
+  ${decks.length ? `<div class="grid g3">${decks.map(d => { const subs = subDecks(d.id); const c = treeCards(d.id); const due = dueCards(d.id).length, nw = newCards(d.id).length; const acc = c.reduce((a, x) => a + x.ok, 0), tot = c.reduce((a, x) => a + x.ok + x.bad, 0);
+    return `<div class="card deck" data-deck="${d.id}"><div class="ttl" style="margin:0"><h2 class="dname">${ico("folder")}<span>${esc(d.name)}</span></h2>${subjPill(d.subject)}</div>
+    <div class="nums"><span class="n-due">${due} revisar</span><span class="n-new">${nNew(nw)}</span><span class="sub">${c.length} total</span></div>
     <div class="sub">${tot ? `Acertos: ${Math.round(acc / tot * 100)}%` : "Ainda não estudado"}</div>
-    <div class="row"><button class="btn pri sm" data-act="study" ${due + nw ? "" : "disabled"}>Estudar</button><button class="btn sm" data-act="open">Cartões</button><button class="btn sm ghost" data-act="add">${ico("plus")}Cartão</button></div></div>`; }).join("")}</div>`
-    : `<div class="card"><div class="empty"><p><b>Nenhum baralho ainda.</b></p><p>Crie um baralho e adicione cartões manualmente, cole uma lista, ou peça para a Memora IA gerar a partir de um tema, fotos ou PDFs.</p><div class="row" style="justify-content:center"><button class="btn" id="newDeck2">Criar baralho</button><button class="btn pri" data-go="ia">Gerar com IA</button></div></div></div>`}
+    ${subs.length ? `<div class="subs" aria-label="Subpastas de ${esc(d.name)}">${subs.map(s => { const n = deckCards(s.id).length, sd = dueCards(s.id).length; return `<button class="subchip" data-sub="${s.id}" title="Abrir ${esc(deckPath(s.id))}">${esc(s.name)}<span class="sub">${n}</span>${sd ? `<span class="n-due">${sd}</span>` : ""}</button>`; }).join("")}</div>` : ""}
+    <div class="row"><button class="btn pri sm" data-act="study" ${due + nw ? "" : "disabled"}>${subs.length ? "Estudar tudo" : "Estudar"}</button><button class="btn sm" data-act="open">Abrir</button><button class="btn sm ghost" data-act="add">${ico("plus")}Cartão</button><button class="btn sm ghost" data-act="sub">${ico("plus")}Subpasta</button></div></div>`; }).join("")}</div>`
+    : `<div class="card"><div class="empty"><p><b>Nenhuma pasta ainda.</b></p><p>Crie uma pasta para cada matéria (por exemplo, Biologia) e, dentro dela, subpastas para cada conteúdo (Citologia, Genética…). Adicione cartões à mão, cole uma lista ou peça para a Memora IA gerar.</p><div class="row" style="justify-content:center"><button class="btn" id="newDeck2">Criar pasta</button><button class="btn pri" data-go="ia">Gerar com IA</button></div></div></div>`}
   <div class="card"><div class="ttl"><h2>Cartões que você mais erra</h2></div>${weakList(8)}</div>`;
 };
 BIND.flashcards = v => {
@@ -1584,48 +1611,121 @@ BIND.flashcards = v => {
   const ifc = $("#impFc"); if (ifc) ifc.onclick = () => openImport();
   const sa = $("#studyAll"); if (sa) sa.onclick = () => startStudy(null);
   v.querySelectorAll("[data-deck]").forEach(c => c.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
-    const id = c.dataset.deck; if (b.dataset.act === "study") startStudy(id); else if (b.dataset.act === "open") { fcDeck = id; render(); } else editCard({ deck: id });
+    const id = c.dataset.deck; if (b.dataset.act === "study") startStudy(id); else if (b.dataset.act === "open") { fcDeck = id; fcSel = null; render(); window.scrollTo(0, 0); }
+    else if (b.dataset.act === "sub") editDeck(null, () => { fcDeck = id; fcSel = null; render(); window.scrollTo(0, 0); }, { parent: id }); else editCard({ deck: id });
   }));
+  v.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => { fcDeck = b.dataset.sub; fcSearch = ""; fcSel = null; render(); window.scrollTo(0, 0); });
 };
-function editDeck(d, after) {
+function editDeck(d, after, o = {}) {
   const isNew = !d; d = d || {};
-  modal(`<h2>${isNew ? "Novo baralho" : "Editar baralho"}</h2><label class="field"><span>Nome</span><input type="text" name="name" id="dName" value="${esc(d.name || "")}" placeholder="Ex.: Química — Equilíbrio iônico"></label>
-  <label class="field"><span>Matéria</span><select name="subject" id="dSubj">${subjOptions(d.subject)}</select></label>
+  const kids = isNew ? [] : subDecks(d.id);
+  const parent0 = isNew ? (o.parent || "") : (deckParentOf(d)?.id || "");
+  const sub = !!parent0;
+  modal(`<h2>${isNew ? (sub ? "Nova subpasta" : "Nova pasta") : (sub ? "Editar subpasta" : "Editar pasta")}</h2>
+  <label class="field"><span>Nome</span><input type="text" name="name" id="dName" value="${esc(d.name || "")}" placeholder="${sub ? "Ex.: Citologia" : "Ex.: Biologia"}"></label>
+  <label class="field"><span>Matéria</span><select name="subject" id="dSubj">${subjOptions(d.subject || (sub ? deckById(parent0)?.subject : "") || "")}</select></label>
+  <label class="field"><span>Dentro da pasta</span><select name="parent" id="dParent" ${kids.length ? "disabled" : ""}><option value="">Nenhuma (é uma pasta principal)</option>${deckOptions(parent0, { topOnly: true, skip: [d.id] })}</select></label>
+  ${kids.length ? `<p class="sub" style="margin:0">Esta pasta tem ${kids.length} subpasta${kids.length > 1 ? "s" : ""}, então ela não pode ficar dentro de outra.</p>` : ""}
   <div class="row end"><button class="btn ghost" data-x>Cancelar</button><button class="btn pri" data-ok>Salvar</button></div>`, (m, close) => {
     m.querySelector("[data-x]").onclick = close;
-    m.querySelector("[data-ok]").onclick = () => { const f = formData(m); if (!f.name.trim()) return toast("Dê um nome ao baralho");
-      if (isNew) { d = { id: uid(), name: f.name.trim(), subject: f.subject, createdAt: Date.now() }; S.decks.push(d); } else Object.assign(d, { name: f.name.trim(), subject: f.subject });
-      commit("decks"); close(); after ? after(d) : render(); };
+    m.querySelector("[data-ok]").onclick = () => {
+      const f = formData(m); const name = f.name.trim(); if (!name) return toast(sub ? "Dê um nome à subpasta" : "Dê um nome à pasta");
+      const parent = kids.length ? "" : (f.parent || "");
+      if (isNew) { d = { id: uid(), name, subject: f.subject, createdAt: Date.now() }; if (parent) d.parent = parent; S.decks.push(d); }
+      else { Object.assign(d, { name, subject: f.subject }); if (parent) d.parent = parent; else delete d.parent; }
+      commit("decks"); close(); after ? after(d) : render();
+    };
   });
 }
 function deckView() {
-  const d = S.decks.find(x => x.id === fcDeck); if (!d) { fcDeck = null; return VIEWS.flashcards(); }
-  const q = fcSearch.toLowerCase();
-  const cs = deckCards(d.id).filter(c => !q || (c.front + " " + c.back + " " + (c.tags || []).join(" ")).toLowerCase().includes(q)).sort((a, b) => b.createdAt - a.createdAt);
-  return `<div class="head"><div><button class="btn sm ghost" id="back">← Baralhos</button><h1 style="margin-top:8px">${esc(d.name)}</h1><p>${deckCards(d.id).length} cartões · ${dueCards(d.id).length} para revisar · ${newCards(d.id).length} novos</p></div>
-  <div class="row"><button class="btn" id="editD">Renomear</button><button class="btn" id="bulk">Colar em lote</button><button class="btn" id="impDk">Importar planilha</button><button class="btn" data-go="ia">${ico("ia")}IA</button><button class="btn pri" id="addC">${ico("plus")}Cartão</button></div></div>
-  <div class="card"><div class="ttl"><input type="search" id="fcSearch" placeholder="Buscar nos cartões" value="${esc(fcSearch)}" style="max-width:320px"><button class="btn sm ghost danger" id="delD">Excluir baralho</button></div>
-  ${cs.length ? `<div class="list">${cs.map(c => `<div class="item" data-card="${c.id}"><div class="grow"><div class="t" style="font-weight:600">${esc(c.front)}</div><div class="sub t">${esc(c.back.slice(0, 220))}</div></div>
-    <div class="row" style="gap:5px;flex:none">${c.reps === 0 && !c.lapses ? `<span class="pill n-new">novo</span>` : c.due <= Date.now() ? `<span class="pill n-due">hoje</span>` : `<span class="pill">${fmtDate(dkey(new Date(c.due)))}</span>`}${c.bad ? `<span class="pill" style="color:var(--bad)">${c.bad}✕</span>` : ""}
-    <button class="icon-btn" data-act="edit" aria-label="Editar">${ico("edit")}</button><button class="icon-btn" data-act="del" aria-label="Excluir">${ico("trash")}</button></div></div>`).join("")}</div>` : `<div class="empty">${q ? "Nenhum cartão encontrado." : "Baralho vazio. Adicione cartões ou gere com a IA."}</div>`}</div>`;
+  const d = deckById(fcDeck); if (!d) { fcDeck = null; fcSel = null; return VIEWS.flashcards(); }
+  const par = deckParentOf(d); const subs = par ? [] : subDecks(d.id);
+  const q = fcSearch.toLowerCase(); const wide = !!q && subs.length > 0;
+  const own = deckCards(d.id), all = subs.length ? treeCards(d.id) : own;
+  const cs = (wide ? all : own).filter(c => !q || (c.front + " " + c.back + " " + (c.tags || []).join(" ")).toLowerCase().includes(q)).sort((a, b) => b.createdAt - a.createdAt);
+  if (fcSel) for (const id of [...fcSel]) if (!CARDS[id] || CARDS[id].deleted) fcSel.delete(id);
+  const due = dueCards(d.id).length, nw = newCards(d.id).length;
+  const moveTo = par ? par.id : (subs[0] ? subs[0].id : "");
+  return `<div class="head"><div><button class="btn sm ghost" id="back">← ${par ? esc(par.name) : "Pastas"}</button><h1 style="margin-top:8px">${par ? `<span class="crumb">${esc(par.name)} ›</span> ` : ""}${esc(d.name)}</h1><p>${nCards(all.length)}${subs.length ? ` · ${own.length} soltos na pasta e ${all.length - own.length} em ${subs.length} subpasta${subs.length > 1 ? "s" : ""}` : ""} · ${due} para revisar · ${nNew(nw)}</p></div>
+  <div class="row"><button class="btn pri" id="studyD" ${due + nw ? "" : "disabled"}>${subs.length ? "Estudar tudo" : "Estudar"}</button><button class="btn" id="editD">Editar</button><button class="btn" id="bulk">Colar em lote</button><button class="btn" id="impDk">Importar planilha</button><button class="btn" data-go="ia">${ico("ia")}IA</button><button class="btn" id="addC">${ico("plus")}Cartão</button></div></div>
+  ${par ? "" : `<div class="card"><div class="ttl"><h2>Subpastas</h2><button class="btn sm" id="newSub">${ico("plus")}Nova subpasta</button></div>
+    ${subs.length ? `<div class="list">${subs.map(s => { const n = deckCards(s.id).length, sd = dueCards(s.id).length, sn = newCards(s.id).length;
+      return `<div class="item click" data-subrow="${s.id}" tabindex="0" role="button"><span class="dico">${ico("folder")}</span><div class="grow"><div class="t"><b>${esc(s.name)}</b></div><div class="sub">${nCards(n)} · <span class="n-due">${sd} revisar</span> · <span class="n-new">${nNew(sn)}</span></div></div><button class="btn sm pri" data-sstudy="${s.id}" ${sd + sn ? "" : "disabled"}>Estudar</button></div>`; }).join("")}</div>`
+    : `<p class="sub" style="margin:0">Separe os cartões desta pasta por conteúdo. Ex.: em Biologia, crie Citologia, Genética e Ecologia; em Física, Cinemática e Dinâmica.</p>`}</div>`}
+  <div class="card"><div class="ttl"><h2>${q ? (wide ? "Busca na pasta e nas subpastas" : "Busca") : subs.length ? "Cartões soltos nesta pasta" : "Cartões"}</h2><div class="row"><input type="search" id="fcSearch" placeholder="Buscar nos cartões" value="${esc(fcSearch)}" style="max-width:240px">${cs.length && !fcSel ? `<button class="btn sm" id="selOn">Selecionar</button>` : ""}<button class="btn sm ghost danger" id="delD">${par ? "Excluir subpasta" : "Excluir pasta"}</button></div></div>
+  ${fcSel ? `<div class="selbar"><b id="selN">${fcSel.size} selecionado${fcSel.size === 1 ? "" : "s"}</b><button class="btn sm ghost" id="selAll">Marcar todos</button><span class="sub">Mover para</span><select id="selTo" aria-label="Mover para">${deckOptions(moveTo)}<option value="__new">+ Nova subpasta…</option></select><button class="btn sm pri" id="selMove" ${fcSel.size ? "" : "disabled"}>Mover</button><button class="btn sm ghost danger" id="selDel" ${fcSel.size ? "" : "disabled"}>Excluir</button><button class="btn sm ghost" id="selEnd">Concluir</button></div>` : ""}
+  ${cs.length ? `<div class="list">${cs.map(c => { const on = !!(fcSel && fcSel.has(c.id)); return `<div class="item ${fcSel ? "click" : ""} ${on ? "sel" : ""}" data-card="${c.id}">${fcSel ? `<button class="chk ${on ? "on" : ""}" data-csel aria-label="Selecionar cartão" aria-pressed="${on}"></button>` : ""}<div class="grow"><div class="t" style="font-weight:600">${esc(c.front)}</div><div class="sub t">${esc(c.back.slice(0, 220))}</div></div>
+    <div class="row" style="gap:5px;flex:none">${c.deck !== d.id ? `<span class="pill">${esc(deckById(c.deck)?.name || "")}</span>` : ""}${c.reps === 0 && !c.lapses ? `<span class="pill n-new">novo</span>` : c.due <= Date.now() ? `<span class="pill n-due">hoje</span>` : `<span class="pill">${fmtDate(dkey(new Date(c.due)))}</span>`}${c.bad ? `<span class="pill" style="color:var(--bad)">${c.bad}✕</span>` : ""}
+    ${fcSel ? "" : `<button class="icon-btn" data-act="edit" aria-label="Editar">${ico("edit")}</button><button class="icon-btn" data-act="del" aria-label="Excluir">${ico("trash")}</button>`}</div></div>`; }).join("")}</div>`
+  : `<div class="empty">${q ? "Nenhum cartão encontrado." : subs.length ? "Nenhum cartão solto: todos estão nas subpastas." : "Nada aqui ainda. Adicione cartões, gere com a IA ou mova cartões de outra pasta."}</div>`}</div>`;
 }
 function bindDeck(v) {
-  const d = S.decks.find(x => x.id === fcDeck);
-  $("#back").onclick = () => { fcDeck = null; fcSearch = ""; render(); };
+  const d = deckById(fcDeck); const par = deckParentOf(d);
+  const open = id => { fcDeck = id; fcSearch = ""; fcSel = null; render(); window.scrollTo(0, 0); };
+  $("#back").onclick = () => open(par ? par.id : null);
+  $("#studyD").onclick = () => startStudy(d.id);
   $("#editD").onclick = () => editDeck(d);
   $("#addC").onclick = () => editCard({ deck: d.id });
   $("#bulk").onclick = () => bulkImport(d);
   $("#impDk").onclick = () => openImport(d.id);
+  const ns = $("#newSub"); if (ns) ns.onclick = () => editDeck(null, () => render(), { parent: d.id });
+  v.querySelectorAll("[data-subrow]").forEach(r => { r.onclick = e => { if (!e.target.closest("[data-sstudy]")) open(r.dataset.subrow); }; r.onkeydown = e => { if (e.key === "Enter") open(r.dataset.subrow); }; });
+  v.querySelectorAll("[data-sstudy]").forEach(b => b.onclick = () => startStudy(b.dataset.sstudy));
   const s = $("#fcSearch"); s.oninput = () => { fcSearch = s.value; const pos = s.selectionStart; render(); const n = $("#fcSearch"); n.focus(); n.setSelectionRange(pos, pos); };
-  $("#delD").onclick = () => confirmBox(`Excluir o baralho "${d.name}" e seus ${deckCards(d.id).length} cartões?`, "Excluir", () => { const ids = deckCards(d.id).map(c => c.id); const e = trashAdd("deck", `${d.name} (${ids.length} cartões)`, { deck: d, cards: ids }); deckCards(d.id).forEach(c => { c.deleted = true; commitCard(c); }); S.decks = S.decks.filter(x => x !== d); fcDeck = null; commit("decks"); render(); afterDelete("Baralho excluído", e); });
-  v.querySelectorAll("[data-card]").forEach(r => { const c = CARDS[r.dataset.card]; r.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
-    if (b.dataset.act === "edit") editCard(c); else confirmBox("Excluir este cartão?", "Excluir", () => { const e = trashAdd("card", c.front.slice(0, 90), { id: c.id }); c.deleted = true; commitCard(c); render(); afterDelete("Cartão excluído", e); });
-  }); });
+  $("#delD").onclick = () => deleteDeck(d);
+  const so = $("#selOn"); if (so) so.onclick = () => { fcSel = new Set(); render(); };
+  if (fcSel) {
+    const paint = () => { const n = $("#selN"); if (n) n.textContent = `${fcSel.size} selecionado${fcSel.size === 1 ? "" : "s"}`; ["#selMove", "#selDel"].forEach(q => { const b = $(q); if (b) b.disabled = !fcSel.size; }); };
+    v.querySelectorAll("[data-card]").forEach(r => r.onclick = () => {
+      const id = r.dataset.card; if (fcSel.has(id)) fcSel.delete(id); else fcSel.add(id);
+      const on = fcSel.has(id); r.classList.toggle("sel", on); const k = r.querySelector("[data-csel]"); if (k) { k.classList.toggle("on", on); k.setAttribute("aria-pressed", on); } paint();
+    });
+    $("#selAll").onclick = () => { v.querySelectorAll("[data-card]").forEach(r => fcSel.add(r.dataset.card)); render(); };
+    $("#selEnd").onclick = () => { fcSel = null; render(); };
+    $("#selDel").onclick = () => { const ids = [...fcSel]; if (!ids.length) return;
+      confirmBox(`Excluir ${nCards(ids.length)}? ${ids.length === 1 ? "Ele vai" : "Eles vão"} para a lixeira.`, "Excluir", () => {
+        const e = trashAdd("cards", `${nCards(ids.length)} de "${deckPath(d.id)}"`, { ids }); ids.forEach(id => { CARDS[id].deleted = true; CARDS[id].updatedAt = Date.now(); });
+        if (diffKind("card", ids)) changedLocally(); fcSel = null; render(); afterDelete(ids.length === 1 ? "Cartão excluído" : "Cartões excluídos", e); }); };
+    $("#selMove").onclick = () => { const to = $("#selTo").value; const ids = [...fcSel]; if (!ids.length) return;
+      if (to === "__new") return editDeck(null, nd => moveCards(ids, nd.id), { parent: par ? par.id : d.id });
+      moveCards(ids, to); };
+  } else {
+    v.querySelectorAll("[data-card]").forEach(r => { const c = CARDS[r.dataset.card]; r.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+      if (b.dataset.act === "edit") editCard(c); else confirmBox("Excluir este cartão?", "Excluir", () => { const e = trashAdd("card", c.front.slice(0, 90), { id: c.id }); c.deleted = true; commitCard(c); render(); afterDelete("Cartão excluído", e); });
+    }); });
+  }
+}
+function moveCards(ids, to) {
+  if (!deckById(to)) return toast("Escolha a pasta de destino");
+  const list = ids.filter(id => CARDS[id] && !CARDS[id].deleted && CARDS[id].deck !== to);
+  list.forEach(id => { CARDS[id].deck = to; CARDS[id].updatedAt = Date.now(); });
+  if (list.length && diffKind("card", list)) changedLocally();
+  fcSel = null; render();
+  toast(list.length ? `${nCards(list.length)} ${list.length === 1 ? "movido" : "movidos"} para "${deckPath(to)}"` : "Os cartões já estavam nessa pasta");
+}
+/* excluir pasta (com as subpastas) ou subpasta (com os cartões, ou levando os cartões para a pasta maior) */
+function deleteDeck(d) {
+  const par = deckParentOf(d); const subs = par ? [] : subDecks(d.id);
+  const own = deckCards(d.id), all = subs.length ? treeCards(d.id) : own;
+  if (par && own.length) return modal(`<h2>Excluir a subpasta "${esc(d.name)}"?</h2><p style="margin:0">Ela tem ${nCards(own.length)}. O que fazer com eles?</p>
+    <div class="row end"><button class="btn ghost" data-x>Cancelar</button><button class="btn" data-keep>Mover para "${esc(par.name)}"</button><button class="btn pri" data-ok style="background:var(--bad);border-color:var(--bad);color:#fff">Excluir junto</button></div>`, (m, close) => {
+      m.querySelector("[data-x]").onclick = close;
+      m.querySelector("[data-keep]").onclick = () => { close(); const ids = own.map(c => c.id); ids.forEach(id => { CARDS[id].deck = par.id; CARDS[id].updatedAt = Date.now(); }); if (diffKind("card", ids)) changedLocally(); removeDecks(d, [], [], `${nCards(ids.length)} ${ids.length === 1 ? "foi" : "foram"} para "${par.name}"`); };
+      m.querySelector("[data-ok]").onclick = () => { close(); removeDecks(d, [], own.map(c => c.id)); };
+    });
+  confirmBox(subs.length ? `Excluir a pasta "${d.name}", ${subs.length === 1 ? "a subpasta" : `as ${subs.length} subpastas`} e ${all.length === 1 ? "o cartão" : `os ${all.length} cartões`}?` : par ? `Excluir a subpasta "${d.name}"?` : `Excluir a pasta "${d.name}"${all.length ? ` e ${all.length === 1 ? "o cartão" : `os ${all.length} cartões`}` : ""}?`, "Excluir", () => removeDecks(d, subs, all.map(c => c.id)));
+}
+function removeDecks(d, subs, ids, note) {
+  const back = deckParentOf(d)?.id || null;
+  const e = trashAdd("deck", `${deckPath(d.id)}${subs.length ? ` + ${subs.length} subpasta${subs.length > 1 ? "s" : ""}` : ""} (${nCards(ids.length)})`, { deck: clone(d), subs: subs.map(clone), cards: ids });
+  ids.forEach(id => { CARDS[id].deleted = true; CARDS[id].updatedAt = Date.now(); }); if (ids.length && diffKind("card", ids)) changedLocally();
+  const gone = new Set([d.id, ...subs.map(s => s.id)]); S.decks = S.decks.filter(x => !gone.has(x.id));
+  fcDeck = back; fcSel = null; commit("decks"); render(); afterDelete(note ? `Subpasta excluída · ${note}` : back ? "Subpasta excluída" : "Pasta excluída", e);
 }
 function editCard(c) {
   const isNew = !c.id;
   modal(`<h2>${isNew ? "Novo cartão" : "Editar cartão"}</h2>
-  <label class="field"><span>Baralho</span><select name="deck" id="cDeck">${S.decks.map(d => `<option value="${d.id}" ${d.id === c.deck ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
+  <label class="field"><span>Pasta</span><select name="deck" id="cDeck">${deckOptions(c.deck)}</select></label>
   <label class="field"><span>Frente (pergunta)</span><textarea name="front" id="cFront">${esc(c.front || "")}</textarea></label>
   <label class="field"><span>Verso (resposta)</span><textarea name="back" id="cBack">${esc(c.back || "")}</textarea></label>
   <label class="field"><span>Etiquetas (separe por vírgula)</span><input type="text" name="tags" id="cTags" value="${esc((c.tags || []).join(", "))}"></label>
@@ -1660,10 +1760,10 @@ function studyView() {
   while (st.i < st.queue.length && (!CARDS[st.queue[st.i]] || CARDS[st.queue[st.i]].deleted)) st.i++;   // cartão excluído em outro aparelho
   if (st.i >= st.queue.length) {
     return `<div class="study"><div class="fc"><h1 style="text-align:center">Sessão concluída</h1><p class="sub" style="text-align:center">${st.done} revisões · ${st.done ? Math.round(st.ok / st.done * 100) : 0}% de acertos</p>
-    <div class="row" style="justify-content:center"><button class="btn" id="endStudy">Voltar aos baralhos</button>${st.failed.length ? `<button class="btn pri" id="again">Revisar ${st.failed.length === 1 ? "o cartão que errei" : `os ${st.failed.length} que errei`}</button>` : ""}</div></div></div>`;
+    <div class="row" style="justify-content:center"><button class="btn" id="endStudy">Voltar às pastas</button>${st.failed.length ? `<button class="btn pri" id="again">Revisar ${st.failed.length === 1 ? "o cartão que errei" : `os ${st.failed.length} que errei`}</button>` : ""}</div></div></div>`;
   }
   const c = CARDS[st.queue[st.i]]; const deck = S.decks.find(d => d.id === c.deck);
-  return `<div class="study"><div class="row" style="justify-content:space-between"><button class="btn sm ghost" id="endStudy">← Sair</button><span class="sub">${esc(deck?.name || "")} · ${st.i + 1} de ${st.queue.length}</span></div>
+  return `<div class="study"><div class="row" style="justify-content:space-between"><button class="btn sm ghost" id="endStudy">← Sair</button><span class="sub">${esc(deckPath(c.deck))} · ${st.i + 1} de ${st.queue.length}</span></div>
   <div class="bar"><div style="width:${st.i / st.queue.length * 100}%"></div></div>
   <div class="fc"><div class="q">${esc(c.front)}</div>${st.shown ? `<div class="a">${esc(c.back)}</div>` : ""}
   ${st.explain ? `<div class="note" style="white-space:pre-wrap">${esc(st.explain)}</div>` : ""}</div>
@@ -1742,8 +1842,8 @@ async function explainCard() {
 /* attachments */
 let ATT = []; // {id, kind:'image'|'text'|'pdf', name, blob?, url?, text?, pages?}
 let GEN = [];  // ids dos cartões que a IA criou nesta visita (já salvos no baralho)
-let genRun = null, genHidden = false, genUserCancel = false, genEditT = null, aiJobT = null;
-let genBusy = null, aiForm = { prompt: "", count: 15, level: "vestibular", style: "misto", depth: "media", tier: "default", deck: "", newDeck: "" };
+let genRun = null, genHidden = false, genUserCancel = false, genYield = false, genEditT = null, aiJobT = null;
+let genBusy = null, aiForm = { prompt: "", count: 15, level: "vestibular", style: "misto", depth: "media", tier: "default", deck: "", newDeck: "", parent: "" };
 async function addFiles(files) {
   for (const f of files) {
     const n = f.name || "imagem colada";
@@ -1793,22 +1893,23 @@ const iaGerarView = () => {
     <label class="field"><span>Nível</span><select id="aiLevel">${[["basico", "Básico"], ["vestibular", "Vestibular"], ["medicina", "Medicina / alto nível"], ["superior", "Ensino superior"]].map(([v, l]) => `<option value="${v}" ${f.level === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div class="row"><label class="field"><span>Estilo</span><select id="aiStyle">${[["misto", "Misto"], ["pergunta", "Pergunta e resposta"], ["lacuna", "Completar lacuna"], ["conceito", "Conceito → definição"], ["aplicacao", "Aplicação / caso"], ["vf", "Verdadeiro ou falso justificado"]].map(([v, l]) => `<option value="${v}" ${f.style === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="field"><span>Resposta</span><select id="aiDepth">${[["curta", "Curta e direta"], ["media", "Com explicação breve"], ["longa", "Explicação aprofundada"]].map(([v, l]) => `<option value="${v}" ${f.depth === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
-    <div class="row"><label class="field"><span>Salvar no baralho</span><select id="aiDeck"><option value="">+ Criar novo baralho</option>${S.decks.map(d => `<option value="${d.id}" ${f.deck === d.id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
-    <label class="field" id="aiNewDeckF" ${f.deck ? "hidden" : ""}><span>Nome do novo baralho</span><input type="text" id="aiNewDeck" value="${esc(f.newDeck)}" placeholder="Definido pela IA se vazio"></label></div>
+    <div class="row"><label class="field"><span>Salvar na pasta</span><select id="aiDeck"><option value="">+ Criar nova pasta ou subpasta</option>${deckOptions(f.deck)}</select></label>
+    <label class="field" id="aiNewDeckF" ${f.deck ? "hidden" : ""}><span>Nome da nova pasta</span><input type="text" id="aiNewDeck" value="${esc(f.newDeck)}" placeholder="Definido pela IA se vazio"></label>
+    <label class="field" id="aiParentF" ${f.deck ? "hidden" : ""}><span>Dentro da pasta</span><select id="aiParent"><option value="">Nenhuma (pasta principal)</option>${deckOptions(f.parent || "", { topOnly: true })}</select></label></div>
     <label class="field"><span>Qualidade</span><select id="aiTier"><option value="quick" ${f.tier === "quick" ? "selected" : ""}>Rápida</option><option value="default" ${f.tier === "default" ? "selected" : ""}>Equilibrada</option><option value="complex" ${f.tier === "complex" ? "selected" : ""}>Máxima (mais lenta)</option></select></label>
     <div class="row end" style="margin-top:auto">${genBusy ? `<span class="spin"></span><span class="sub" id="genProg">Gerando…</span><button class="btn" id="aiCancel">Cancelar</button>` : `<button class="btn" id="aiWeak">Reforçar meus pontos fracos</button><button class="btn pri" id="aiGo">${ico("ia")}Gerar cartões</button>`}</div></div></div>
   ${(() => { const gl = GEN.map(id => CARDS[id]).filter(c => c && !c.deleted); if (!gl.length) return "";
-    const dn = [...new Set(gl.map(c => S.decks.find(d => d.id === c.deck)?.name).filter(Boolean))];
+    const dn = [...new Set(gl.map(c => deckPath(c.deck)).filter(Boolean))];
     return `<div class="card"><div class="ttl"><h2>3. Criados agora · ${gl.length} ${gl.length > 1 ? "cartões já salvos" : "cartão já salvo"}${dn.length ? ` em ${esc(dn.map(n => `"${n}"`).join(", "))}` : ""}</h2><div class="row"><button class="btn sm pri" id="genStudy">Estudar agora</button><button class="btn sm ghost danger" id="genUndo">Apagar ${gl.length > 1 ? `estes ${gl.length}` : "este"}</button><button class="btn sm ghost" id="genHide">Fechar lista</button></div></div>
     <p class="sub" style="margin:0 0 8px">Tudo já está salvo no baralho e na nuvem, mesmo que você saia do app. Se quiser, ajuste o texto aqui mesmo ou apague o que não servir.</p>
     <div class="gen">${gl.map(c => `<div class="gcard saved" data-g="${esc(c.id)}"><textarea data-gf="front" aria-label="Frente">${esc(c.front)}</textarea><textarea data-gf="back" aria-label="Verso">${esc(c.back)}</textarea><button class="icon-btn" data-gd aria-label="Apagar este cartão">${ico("trash")}</button></div>`).join("")}</div></div>`; })()}`;
 };
 const bindGerar = v => {
   renderAtt();
-  const sync = () => { aiForm = { prompt: $("#aiPrompt").value, count: +$("#aiCount").value || 15, level: $("#aiLevel").value, style: $("#aiStyle").value, depth: $("#aiDepth").value, tier: $("#aiTier").value, deck: $("#aiDeck").value, newDeck: $("#aiNewDeck").value }; };
+  const sync = () => { aiForm = { prompt: $("#aiPrompt").value, count: +$("#aiCount").value || 15, level: $("#aiLevel").value, style: $("#aiStyle").value, depth: $("#aiDepth").value, tier: $("#aiTier").value, deck: $("#aiDeck").value, newDeck: $("#aiNewDeck").value, parent: $("#aiParent").value }; };
   v.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("change", sync));
   $("#aiPrompt").addEventListener("input", sync);
-  $("#aiDeck").onchange = () => { sync(); $("#aiNewDeckF").hidden = !!aiForm.deck; };
+  $("#aiDeck").onchange = () => { sync(); $("#aiNewDeckF").hidden = $("#aiParentF").hidden = !!aiForm.deck; };
   v.querySelectorAll("[data-chip]").forEach(b => b.onclick = () => { const p = $("#aiPrompt"); p.value = (p.value ? p.value.trim() + "\n" : "") + b.dataset.chip; sync(); p.focus(); });
   const drop = $("#drop"), fi = $("#aiFile");
   drop.onclick = () => fi.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fi.click(); } };
@@ -1856,7 +1957,7 @@ async function generate(weak = false, resume = null) {
     if (!w.length) return toast("Você ainda não tem cartões errados para reforçar");
     weakTxt = "O estudante erra repetidamente estes cartões. Identifique os conceitos de base que ele não domina e crie cartões NOVOS que ataquem essas lacunas por outros ângulos (não repita os mesmos):\n" + w.map(c => `- P: ${c.front} | R: ${c.back} | erros: ${c.bad}`).join("\n"); }
   if (!f.prompt.trim() && !material && !useImgs.length && !weak) return toast("Escreva um pedido ou anexe um material");
-  const existing = f.deck ? deckCards(f.deck).slice(0, 120).map(c => "- " + c.front.slice(0, 120)).join("\n") : "";
+  const existing = f.deck ? treeCards(f.deck).slice(0, 120).map(c => "- " + c.front.slice(0, 120)).join("\n") : "";
   const prompt = `Você é a Memora IA, especialista em criar flashcards de repetição espaçada para estudantes brasileiros.
 Tarefa: criar exatamente ${Math.min(80, Math.max(1, f.count))} flashcards em português do Brasil.
 Nível: ${LEVELS[f.level]}. Estilo: ${STYLES[f.style]}. Verso: ${DEPTH[f.depth]}.
@@ -1869,39 +1970,50 @@ ${existing ? `Já existem estes cartões no baralho; não os repita:\n${existing
 Responda SOMENTE com JSON neste formato: {"deckName": "nome curto sugerido para o baralho", "subject": "matéria (ex.: Química)", "cards": [{"front": "...", "back": "...", "tags": ["assunto"]}]}`;
   const job = resume ? Object.assign(resume, { run: uid(), dev: DEV, at: Date.now(), tries: (resume.tries || 1) + 1 })
     : { id: uid(), run: uid(), dev: DEV, at: Date.now(), tries: 1, weak: !!weak, files: ATT.map(a => a.name).slice(0, 10),
-        form: { prompt: f.prompt.slice(0, 4000), count: f.count, level: f.level, style: f.style, depth: f.depth, tier: f.tier, deck: f.deck, newDeck: f.newDeck } };
+        form: { prompt: f.prompt.slice(0, 4000), count: f.count, level: f.level, style: f.style, depth: f.depth, tier: f.tier, deck: f.deck, newDeck: f.newDeck, parent: f.parent || "" } };
   delete job.away;
   aiJobSet(job);            // o pedido fica na nuvem: se o app fechar no meio, ele continua quando o aluno voltar
-  genBusy = new AbortController(); genRun = job.run; genHidden = document.visibilityState === "hidden"; genUserCancel = false;
+  genBusy = new AbortController(); genRun = job.run; genHidden = document.visibilityState === "hidden"; genUserCancel = false; genYield = false;
   if (route === "ia") render(); else renderNav();
   let retry = false;
   try {
     const out = await ai.json(prompt, { images: useImgs.length ? useImgs : undefined, modelTier: f.tier, signal: genBusy.signal, onText: ({ text }) => { const p = $("#genProg"); if (p) p.textContent = `Gerando… ${(text.match(/"front"/g) || []).length} cartões`; } });
     const cards = (out?.cards || []).filter(c => c && c.front && c.back);
     if (!cards.length) throw { code: "empty" };
-    if (aiJob()?.run !== job.run) toast("Esses cartões já foram criados em outro aparelho.");   // outro aparelho assumiu este pedido
+    if (aiJob()?.run !== job.run || liveCards().some(c => c.job === job.id && c.run !== job.run)) toast("Esses cartões já foram criados em outro aparelho.");   // outro aparelho assumiu este pedido
     else {
       const deck = genDeckFor(f, out);
       const made = cards.slice(0, 80).map(c => newCard(deck.id, String(c.front).trim(), String(c.back).trim(), Array.isArray(c.tags) ? c.tags.map(String).slice(0, 5) : [], "ia"));
-      made.forEach(c => { capCard(c); CARDS[c.id] = c; });
+      made.forEach(c => { Object.assign(c, { job: job.id, run: job.run }); capCard(c); CARDS[c.id] = c; });
       if (diffKind("card", made.map(c => c.id))) changedLocally();      // salvos na hora, no aparelho e na nuvem
-      GEN = [...made.map(c => c.id), ...GEN];
+      GEN = [...made.map(c => c.id), ...GEN]; dedupeJobs();
       if (aiForm === f || resume) { aiForm.deck = deck.id; aiForm.newDeck = ""; }
       aiJobSet(null); Cloud.flush();
-      toast(`${made.length} cartões salvos em "${deck.name}"${imgs.length > useImgs.length ? ` · só ${useImgs.length} imagens foram usadas` : ""}`);
+      toast(`${made.length} cartões salvos em "${deckPath(deck.id)}"${imgs.length > useImgs.length ? ` · só ${useImgs.length} imagens foram usadas` : ""}`);
     }
   } catch (e) {
     const code = e?.code; const mine = aiJob()?.run === job.run;
     const fatal = ["refused", "not_granted", "sampling_disabled", "prompt_too_large", "images_unavailable", "image_rejected", "not_declared", "empty", "invalid_json", "empty_completion", "rate_limited", "session_expired", "capability_disabled", "capability_removed"].includes(code);
     if (!mine) { /* outro aparelho cuida deste pedido */ }
-    else if (!genUserCancel && genHidden && !fatal) retry = true;           // o app foi para o fundo no meio do pedido: refaz quando ele voltar
+    else if (genYield || (!genUserCancel && genHidden && !fatal)) retry = true;   // o app foi para o fundo no meio do pedido: refaz quando ele voltar
     else { aiJobSet(null); if (code !== "cancelled") toast(code === "empty" ? "A IA não devolveu cartões. Reformule o pedido." : aiErr(e)); }
   }
   genBusy = null; genRun = null;
   if (route === "ia") softRender(); else renderNav();
-  if (retry && document.visibilityState === "visible") aiJobSoon(1200);
+  if (retry && document.visibilityState === "visible") aiJobSoon(genYield ? 4000 : 1200);
 }
 const aiJob = () => isPlain(S.settings.aiJob) ? S.settings.aiJob : null;
+function dedupeJobs() {
+  const by = new Map();
+  for (const c of liveCards()) if (c.job && c.run) { let m = by.get(c.job); if (!m) by.set(c.job, m = new Map()); if (!m.has(c.run)) m.set(c.run, []); m.get(c.run).push(c); }
+  const kill = [], swap = new Map();
+  for (const m of by.values()) { if (m.size < 2) continue; const keep = [...m.keys()].sort()[0];
+    for (const [run, list] of m) if (run !== keep) { kill.push(...list); list.forEach((c, i) => { const k = m.get(keep)[i]; if (k) swap.set(c.id, k.id); }); } }
+  if (!kill.length) return;
+  kill.forEach(c => { c.deleted = true; c.updatedAt = Date.now(); });
+  if (diffKind("card", kill.map(c => c.id))) changedLocally(false);
+  if (GEN.some(id => swap.has(id))) GEN = [...new Set(GEN.map(id => swap.get(id) || id))];
+}
 function aiJobSet(j) { if (j) S.settings.aiJob = j; else delete S.settings.aiJob; commit("settings"); }
 function aiJobSoon(ms = 1000) { clearTimeout(aiJobT); aiJobT = setTimeout(aiJobCheck, ms); }
 /* pedido de cartões que ficou pela metade (no iPad o app recarrega quando você sai dele): continua sozinho */
@@ -1925,16 +2037,26 @@ function aiJobCheck() {
 }
 function aiJobAway() { if (!genBusy || !genRun) return; genHidden = true; const j = aiJob(); if (j && j.run === genRun && !j.away) { j.away = Date.now(); commit("settings"); } }
 function aiJobBack() {
-  if (genBusy && genRun) { const j = aiJob(); if (!j || j.run !== genRun) genBusy.abort(); else if (j.away) { delete j.away; commit("settings"); } }
+  if (genBusy && genRun) {
+    const j = aiJob();
+    if (!j || j.run !== genRun) genBusy.abort();                                          // outro aparelho assumiu ou já terminou
+    else if (j.away && Date.now() - j.away > 5000) { genYield = true; genBusy.abort(); }   // ficou fora tempo bastante para outro assumir: cede e confere daqui a pouco
+    else if (j.away) { delete j.away; commit("settings"); }
+  }
   else aiJobSoon(800);
 }
 /* baralho dos cartões gerados: o escolhido; senão um novo, ou o que já existe com o mesmo nome */
 function genDeckFor(f, out) {
-  let deck = S.decks.find(d => d.id === f.deck);
+  let deck = deckById(f.deck);
   if (!deck) {
     const name = ((f.newDeck || "").trim() || String(out?.deckName || "").trim() || "Gerado pela IA").slice(0, 80);
-    deck = S.decks.find(d => hnorm(d.name) === hnorm(name));
-    if (!deck) { const subj = String(out?.subject || "").trim().slice(0, 60); if (subj) ensureSubject(subj); deck = { id: uid(), name, subject: subj, createdAt: Date.now() }; S.decks.push(deck); commit("decks"); }
+    const p0 = f.parent ? deckById(f.parent) : null; const parent = p0 && !deckParentOf(p0) ? p0 : null;
+    const same = x => hnorm(x.name) === hnorm(name);
+    deck = parent ? subDecks(parent.id).find(same) : (topDecks().find(same) || (() => { const m = S.decks.filter(x => deckParentOf(x) && same(x)); return m.length === 1 ? m[0] : null; })());
+    if (!deck) {
+      const subj = String(out?.subject || (parent && parent.subject) || "").trim().slice(0, 60); if (subj) ensureSubject(subj);
+      deck = { id: uid(), name, subject: subj, createdAt: Date.now() }; if (parent) deck.parent = parent.id; S.decks.push(deck); commit("decks");
+    }
   }
   return deck;
 }
@@ -2818,7 +2940,7 @@ function statsEstudo() {
   const rv = days.map(k => S.revlog[k] || { n: 0, ok: 0 }); const mxr = Math.max(1, ...rv.map(r => r.n));
   const totRev = Object.values(S.revlog).reduce((a, r) => a + r.n, 0), totOk = Object.values(S.revlog).reduce((a, r) => a + r.ok, 0);
   const mature = liveCards().filter(c => c.ivl >= 21).length;
-  const deckAcc = S.decks.map(d => { const c = deckCards(d.id); const ok = c.reduce((a, x) => a + x.ok, 0), t = c.reduce((a, x) => a + x.ok + x.bad, 0); return { d, pct: t ? ok / t : null, t }; }).filter(x => x.t);
+  const deckAcc = topDecks().flatMap(d => [d, ...subDecks(d.id)]).map(d => { const c = deckParentOf(d) ? deckCards(d.id) : treeCards(d.id); const ok = c.reduce((a, x) => a + x.ok, 0), t = c.reduce((a, x) => a + x.ok + x.bad, 0); return { d, pct: t ? ok / t : null, t }; }).filter(x => x.t);
   const goalDays = days.filter(k => secsOnDay(k) >= S.settings.goalMin * 60).length;
   return `<div class="grid g4">
     <div class="card"><div class="lbl">Estudo em 30 dias</div><div class="big">${fmtHM(vals.reduce((a, b) => a + b, 0))}</div><div class="sub">média ${fmtHM(vals.reduce((a, b) => a + b, 0) / 30)}/dia</div></div>
@@ -2831,7 +2953,7 @@ function statsEstudo() {
     <div class="scroll-x"><div class="chart" style="min-width:560px">${days.map((k, i) => `<div class="c" title="${fmtDate(k)}: ${fmtHM(vals[i])}"><div class="bw"><div class="b ${i === 29 ? "today" : ""}" style="height:${vals[i] / mx * 100}%;${vals[i] >= S.settings.goalMin * 60 ? "background:var(--ok)" : ""}"></div></div><small>${i % 5 === 4 || i === 29 ? fmtDate(k).replace(".", "") : "&nbsp;"}</small></div>`).join("")}</div></div></div>
   <div class="grid g2">
     <div class="card"><h2>Tempo total por matéria</h2><p class="sub expl">Todo o tempo de estudo registrado desde o começo, separado por matéria.</p>${Object.keys(bySubj).length ? Object.entries(bySubj).sort((a, b) => b[1] - a[1]).map(([n, v]) => `<div class="hbar"><span class="n">${esc(n)}</span><div class="bar"><div style="width:${v / mxs * 100}%;background:${esc(subjColor(n))}"></div></div><span class="v">${fmtHM(v)}</span></div>`).join("") : `<div class="empty">Sem sessões registradas.</div>`}</div>
-    <div class="card"><h2>Acerto por baralho</h2><p class="sub expl">Ao revisar um flashcard você escolhe Errei, Difícil, Lembrei ou Fácil. Errei conta como erro e as outras três como acerto. A barra mostra a porcentagem de acertos de cada baralho: vermelho abaixo de 60%, amarelo até 80%, verde acima.</p>${deckAcc.length ? deckAcc.sort((a, b) => a.pct - b.pct).map(x => `<div class="hbar"><span class="n">${esc(x.d.name)}</span><div class="bar"><div style="width:${x.pct * 100}%;background:${x.pct < .6 ? "var(--bad)" : x.pct < .8 ? "var(--warn)" : "var(--ok)"}"></div></div><span class="v">${Math.round(x.pct * 100)}%</span></div>`).join("") : `<div class="empty">Estude alguns cartões para ver.</div>`}</div>
+    <div class="card"><h2>Acerto por pasta</h2><p class="sub expl">Ao revisar um flashcard você escolhe Errei, Difícil, Lembrei ou Fácil. Errei conta como erro e as outras três como acerto. A barra mostra a porcentagem de acertos de cada pasta (somando as subpastas) e de cada subpasta: vermelho abaixo de 60%, amarelo até 80%, verde acima.</p>${deckAcc.length ? deckAcc.sort((a, b) => a.pct - b.pct).map(x => `<div class="hbar"><span class="n" title="${esc(deckPath(x.d.id))}">${esc(deckPath(x.d.id))}</span><div class="bar"><div style="width:${x.pct * 100}%;background:${x.pct < .6 ? "var(--bad)" : x.pct < .8 ? "var(--warn)" : "var(--ok)"}"></div></div><span class="v">${Math.round(x.pct * 100)}%</span></div>`).join("") : `<div class="empty">Estude alguns cartões para ver.</div>`}</div>
   </div>
   <div class="card"><h2>Revisões por dia</h2><p class="sub expl">Quantos flashcards você avaliou em cada dia (passe o dedo ou o mouse na barra para ver os números). Revisar um pouco todo dia é o que faz a repetição espaçada funcionar: cada acerto empurra o cartão para mais longe, cada erro traz ele de volta.</p>
     <div class="scroll-x"><div class="chart" style="min-width:560px;height:120px">${rv.map((r, i) => `<div class="c" title="${fmtDate(days[i])}: ${r.n} revisões, ${r.ok} acertos"><div class="bw"><div class="b" style="height:${r.n / mxr * 100}%;background:var(--info)"></div></div><small>${i % 5 === 4 || i === 29 ? fmtDate(days[i]).replace(".", "") : "&nbsp;"}</small></div>`).join("")}</div></div></div>`;
@@ -2899,14 +3021,14 @@ VIEWS.dados = () => {
     <div id="abkBox" style="display:flex;flex-direction:column;gap:8px">${autoBkHTML()}</div>
     <details><summary style="cursor:pointer;font-weight:600">Cópia manual em arquivo (opcional)</summary>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
-      <p class="sub" style="margin:0">${S.tasks.length} pendências · ${S.sessions.length} sessões · ${S.exams.length} provas · ${S.agenda.length} blocos · ${S.decks.length} baralhos · ${liveCards().length} cartões · ${liveSims().length} simulados · ${S.errors.length} erros no caderno</p>
+      <p class="sub" style="margin:0">${S.tasks.length} pendências · ${S.sessions.length} sessões · ${S.exams.length} provas · ${S.agenda.length} blocos · ${S.decks.length} pastas de cartões · ${liveCards().length} cartões · ${liveSims().length} simulados · ${S.errors.length} erros no caderno</p>
       <div class="row"><button class="btn" id="exp">Baixar cópia (.json)</button><button class="btn" id="copyExp">Copiar cópia</button></div>
       <label class="field"><span>Restaurar ou juntar uma cópia do Memora</span><textarea id="impTxt" placeholder="Cole aqui uma cópia do Memora"></textarea></label>
       <div class="row"><button class="btn" id="impGo">Juntar cópia</button><button class="btn" id="impFile">Escolher arquivo</button><input type="file" id="impFi" accept=".json,application/json" hidden></div>
       <p class="sub" style="margin:0">Juntar só acrescenta o que falta; nada é apagado.</p></div></details>
   </div></div>
   <div class="grid g2">
-  <div class="card"><h2>Matérias</h2><p class="sub" style="margin:0 0 8px">As matérias e suas cores aparecem em pendências, cronômetro, horários, baralhos e nos gráficos de setores.</p>
+  <div class="card"><h2>Matérias</h2><p class="sub" style="margin:0 0 8px">As matérias e suas cores aparecem em pendências, cronômetro, horários, pastas de cartões e nos gráficos de setores.</p>
     <div data-form class="row" id="subjForm" style="margin-bottom:8px"><input type="text" id="newSubj" placeholder="Nova matéria" maxlength="40" style="flex:1"><button class="btn" type="button" data-submit>${ico("plus")}Adicionar</button></div>
     ${subjects().length ? `<div class="list">${subjects().map((s, i) => `<div class="item" data-subj="${i}"><input type="color" value="${esc(s.color)}" data-c aria-label="Cor de ${esc(s.name)}" style="width:30px;height:26px;border:0;background:none;padding:0"><div class="grow t">${esc(s.name)}</div><button class="icon-btn" data-ren aria-label="Renomear ${esc(s.name)}">${ico("edit")}</button><button class="icon-btn" data-del aria-label="Excluir ${esc(s.name)}">${ico("trash")}</button></div>`).join("")}</div>` : `<div class="empty">Adicione suas matérias para organizar tudo por cor.</div>`}</div>
   <div class="card nogrow" style="display:flex;flex-direction:column;gap:12px;align-self:start"><h2>Preferências</h2>
@@ -2998,6 +3120,7 @@ function trashRestore(e) {
     case "subject": if (!subjects().some(x => x.name.toLowerCase() === String(d.name).toLowerCase())) subjects().push(d); commit("settings"); break;
     case "deck": {
       if (!S.decks.some(x => x.id === d.deck.id)) S.decks.push(d.deck);
+      (d.subs || []).forEach(s => { if (!S.decks.some(x => x.id === s.id)) S.decks.push(s); });
       (d.cards || []).forEach(id => { const c = CARDS[id]; if (c && c.deleted) { c.deleted = false; commitCard(c); } });
       commit("decks"); break;
     }
@@ -3212,13 +3335,13 @@ function commitCardsBulk(list) {
   renderNav();
 }
 function iaHead() {
-  return `<div class="head"><div><h1>Memora IA</h1><p>Crie cartões com IA a partir de materiais e pedidos, ou importe uma lista pronta de uma planilha. Você revisa tudo antes de salvar.</p></div>
+  return `<div class="head"><div><h1>Memora IA</h1><p>Crie cartões com IA a partir de materiais e pedidos, ou importe uma lista pronta de uma planilha. Os cartões vão direto para a pasta escolhida; depois você ajusta o que quiser.</p></div>
   <div class="tabs" id="iaTabs">${[["gerar", "Gerar com IA"], ["importar", "Importar planilha ou texto"]].map(([k, l]) => `<button data-t="${k}" class="${iaTab === k ? "on" : ""}">${l}</button>`).join("")}</div></div>`;
 }
 function iaImportView() {
   const hasDeck = S.decks.some(d => d.id === IMP.deck); if (!hasDeck) IMP.deck = "";
   return `${iaHead()}
-  ${IMP.done ? `<div class="note ok" id="impDone"><div class="row"><span style="flex:1;min-width:200px"><b>${IMP.done.n} ${IMP.done.n === 1 ? "cartão importado" : "cartões importados"}</b> em "${esc(IMP.done.name)}".${IMP.done.dups ? (IMP.done.dups === 1 ? " 1 repetido foi pulado." : ` ${IMP.done.dups} repetidos foram pulados.`) : ""}</span><button class="btn sm pri" id="impOpen">Ver baralho</button><button class="btn sm ghost" id="impDismiss">Ok</button></div></div>` : ""}
+  ${IMP.done ? `<div class="note ok" id="impDone"><div class="row"><span style="flex:1;min-width:200px"><b>${IMP.done.n} ${IMP.done.n === 1 ? "cartão importado" : "cartões importados"}</b> em "${esc(IMP.done.name)}".${IMP.done.dups ? (IMP.done.dups === 1 ? " 1 repetido foi pulado." : ` ${IMP.done.dups} repetidos foram pulados.`) : ""}</span><button class="btn sm pri" id="impOpen">Ver pasta</button><button class="btn sm ghost" id="impDismiss">Ok</button></div></div>` : ""}
   <div class="grid g2">
     <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>1. Cole ou envie sua lista</h2>
       <p class="sub" style="margin:0">Cole as células de uma planilha (Excel ou Google Planilhas) ou um texto com uma pergunta e uma resposta por linha. Também aceita arquivos .csv, .tsv e .txt, inclusive exportados do Anki.</p>
@@ -3227,12 +3350,12 @@ function iaImportView() {
       <p class="sub" style="margin:0">Tem um arquivo .xlsx? No Excel ou Planilhas use Salvar como → CSV, ou copie as células e cole aqui.</p>
       <div class="row"><label class="field"><span>Separador</span><select id="impDelim">${[["auto", "Detectar sozinho"], ["semi", "Ponto e vírgula ( ; )"], ["tab", "Tabulação"], ["comma", "Vírgula ( , )"], ["pipe", "Barra vertical ( | )"]].map(([v, l]) => `<option value="${v}" ${IMP.delim === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field"><span>Primeira linha</span><select id="impHeader">${[["auto", "Detectar sozinho"], ["yes", "É cabeçalho"], ["no", "É um cartão"]].map(([v, l]) => `<option value="${v}" ${IMP.header === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div></div>
-    <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>2. Colunas e baralho</h2>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>2. Colunas e pasta</h2>
       <div id="impMap"></div>
-      <div class="row"><label class="field"><span>Salvar no baralho</span><select id="impDeck"><option value="">+ Criar novo baralho</option>${S.decks.map(d => `<option value="${esc(d.id)}" ${IMP.deck === d.id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
-      <label class="field" id="impNewF" ${IMP.deck ? "hidden" : ""}><span>Nome do novo baralho</span><input type="text" id="impNew" value="${esc(IMP.newDeck)}" placeholder="Ex.: Química — Equilíbrio"></label></div>
-      <label class="field" id="impSubjF" ${IMP.deck ? "hidden" : ""}><span>Matéria do novo baralho (opcional)</span><select id="impSubj">${subjOptions(IMP.subject)}</select></label>
-      <label class="row" style="gap:8px"><input type="checkbox" id="impDup" ${IMP.skipDup ? "checked" : ""}> Pular cartões que já existem no baralho</label></div></div>
+      <div class="row"><label class="field"><span>Salvar na pasta</span><select id="impDeck"><option value="">+ Criar nova pasta</option>${deckOptions(IMP.deck)}</select></label>
+      <label class="field" id="impNewF" ${IMP.deck ? "hidden" : ""}><span>Nome da nova pasta</span><input type="text" id="impNew" value="${esc(IMP.newDeck)}" placeholder="Ex.: Química — Equilíbrio"></label></div>
+      <label class="field" id="impSubjF" ${IMP.deck ? "hidden" : ""}><span>Matéria da nova pasta (opcional)</span><select id="impSubj">${subjOptions(IMP.subject)}</select></label>
+      <label class="row" style="gap:8px"><input type="checkbox" id="impDup" ${IMP.skipDup ? "checked" : ""}> Pular cartões que já existem na pasta</label></div></div>
   <div class="card"><div class="ttl"><h2>3. Confira e importe</h2><button class="btn pri" id="impGo" disabled>Importar</button></div><div id="impPrev"></div></div>`;
 }
 function impRefresh(rebuildMap) {
@@ -3454,7 +3577,7 @@ function errToCard(e) {
   const def = S.decks.find(d => d.name === "Caderno de erros");
   const front0 = e.topic ? `${e.subject ? e.subject + " — " : ""}${e.topic}: o que preciso lembrar para não errar de novo?` : `Questão que errei${e.simName ? " no " + e.simName : ""}: qual é o ponto-chave?`;
   modal(`<h2>Criar cartão deste erro</h2>
-  <label class="field"><span>Baralho</span><select id="ecDeck">${def ? "" : `<option value="">+ Novo baralho "Caderno de erros"</option>`}${S.decks.map(d => `<option value="${esc(d.id)}" ${def && d.id === def.id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label>
+  <label class="field"><span>Pasta</span><select id="ecDeck">${def ? "" : `<option value="">+ Nova pasta "Caderno de erros"</option>`}${deckOptions(def ? def.id : "")}</select></label>
   <label class="field"><span>Frente (pergunta)</span><textarea id="ecF">${esc(front0)}</textarea></label>
   <label class="field"><span>Verso (resposta)</span><textarea id="ecB">${esc(e.note || "")}</textarea></label>
   <div class="row"><button class="btn sm" id="ecAI">${ico("ia")}Sugerir com IA</button><span class="sub" id="ecMsg"></span></div>

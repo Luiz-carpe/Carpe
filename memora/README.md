@@ -16,7 +16,7 @@ https://claude.ai/artifact/464ZVG7AE2rmrE9AqHwnCr
 cd memora/testes
 npm install
 npx playwright install chromium   # só se o Chromium do Playwright ainda não estiver instalado
-node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar | cartoes
+node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar | cartoes | pastas
 ```
 
 ## Simulados inéditos com IA
@@ -40,6 +40,26 @@ e arquivo HTML para imprimir com folha de respostas e gabarito.
 
 As questões ficam em blocos próprios na nuvem (`qst.<simulado>.<n>`, 10 por bloco), separados do simulado. Um
 ENEM completo, com 180 questões e redação, ocupa 18 blocos de cerca de 25 KB.
+
+## Pastas e subpastas de flashcards
+
+Os cartões ficam em pastas (por matéria, como Biologia ou Física), e cada pasta pode ter subpastas por
+conteúdo (Biologia › Citologia, Física › Cinemática). Uma pasta pode ter cartões soltos e subpastas ao mesmo
+tempo; são só dois níveis.
+
+- **Estudar:** "Estudar tudo" numa pasta revisa os cartões dela e das subpastas. Na subpasta, só os dela.
+- **Organizar:**
+  - em "Selecionar", marque cartões e mova para outra pasta ou subpasta, inclusive uma nova, criada na hora;
+  - em "Editar", uma pasta solta passa a ficar dentro de outra.
+- **Escolher a pasta:** os seletores de pasta (editar cartão, Memora IA, importar planilha e caderno de erros)
+  mostram o caminho completo. A Memora IA pode criar a subpasta nova dentro da pasta escolhida.
+- **Excluir:**
+  - uma subpasta pode ir com os cartões ou deixá-los soltos na pasta maior;
+  - uma pasta leva as subpastas junto;
+  - tudo vai para a lixeira e volta inteiro.
+
+No banco de dados, uma subpasta é um baralho com `parent` apontando para a pasta principal. Uma subpasta cuja
+pasta sumiu (por exemplo, apagada em outro aparelho) passa a aparecer como pasta principal, e nada se perde.
 
 ## Cartões criados pela IA
 
