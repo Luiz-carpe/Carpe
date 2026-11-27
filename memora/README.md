@@ -97,6 +97,29 @@ da nuvem da conta Claude (`data/users/<id>/v2/b/…`). Mudanças em itens difere
 mudanças simultâneas no mesmo item são fundidas campo a campo, e toda alteração fica guardada no aparelho
 (IndexedDB) até a nuvem confirmar. Os dados do formato antigo são migrados sem apagar nada.
 
+### Quanto cabe
+
+A plataforma aceita até 25.000 blocos por artefato, de até 256 KB cada, e tem um limite de tamanho total que
+ela não divulga. Os 25.000 blocos são do artefato inteiro: se outras pessoas usarem o mesmo link, o espaço é
+dividido. O teste de carga `node e2e.js ano` simula um ano de uso pesado:
+
+- 10.000 cartões com histórico;
+- 104 simulados, 52 deles criados pela IA com 90 questões cada;
+- 1.500 pendências, 2.000 erros no caderno e 6 sessões de estudo por dia.
+
+Esse ano ocupa 794 blocos (3,2% do limite) e 21,8 MB. As questões criadas pela IA são cerca de metade disso.
+O maior bloco fica com 77 KB e nada se perde.
+
+| Medida | Resultado |
+| --- | --- |
+| Abrir num aparelho sem nada guardado | 8 s |
+| Reabrir no mesmo aparelho | 1,3 s |
+| Telas | menos de 0,3 s |
+
+A cópia de segurança automática é compactada (gzip em base64 dentro de um JSON, porque a área de arquivos
+aceita até 20 MB por arquivo). O ano pesado vira de 1 a 10 MB, conforme o texto, e a restauração aceita os
+dois formatos. Se a nuvem encher, um aviso fixo no topo da tela oferece baixar a cópia na hora.
+
 O envio para a nuvem acontece no máximo 3 segundos depois da primeira alteração, mesmo com o aluno mexendo
 sem parar. Cada envio é anotado antes de sair, então a confirmação da nuvem é reconhecida como eco deste
 aparelho mesmo quando chega antes da resposta do envio, e nenhuma alteração mais nova é desfeita. Quem abre

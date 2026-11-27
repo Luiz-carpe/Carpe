@@ -71,8 +71,16 @@ class Cloud {
   }
   async deliver(l, pendingDoc) {
     if (!l || this.offline.has(l.key)) return;
-    const docs = this.match(l).map(d => ({ ...d, pw: pendingDoc && d.id === pendingDoc.split("/").pop() }));
-    try { await l.src.frame.evaluate(([id, payload]) => window.__cloudDeliver && window.__cloudDeliver(id, payload), [l.id, { docs, fromCache: false }]); } catch {}
+    // como a plataforma real: só vai o que mudou desde a última entrega para este ouvinte (a primeira entrega leva tudo)
+    const pwId = pendingDoc && pendingDoc.split("/").pop();
+    const all = this.match(l).map(d => ({ ...d, pw: d.id === pwId }));
+    const sent = l.sent || (l.sent = new Map()); const cur = new Set(); const docs = [];
+    for (const d of all) { cur.add(d.id); const s = sent.get(d.id); if (!s || s.ver !== d.ver || s.pw !== d.pw) { docs.push(d); sent.set(d.id, { ver: d.ver, pw: d.pw }); } }
+    const removed = [...sent.keys()].filter(id => !cur.has(id)); removed.forEach(id => sent.delete(id));
+    if (l.started && !docs.length && !removed.length) return;
+    const payload = l.started ? { docs, removed, delta: true, fromCache: false } : { docs: all, fromCache: false };
+    l.started = true;
+    try { await l.src.frame.evaluate(([id, p]) => window.__cloudDeliver && window.__cloudDeliver(id, p), [l.id, payload]); } catch { l.sent = new Map(); l.started = false; }
   }
   broadcast(col, src, p) {
     for (const l of this.listeners.values()) {

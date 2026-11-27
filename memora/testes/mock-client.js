@@ -40,18 +40,20 @@
         const id = nextSub++; let prev = new Map();
         subs.set(id, payload => {
           if (payload.error) { subs.delete(id); if (err) err(payload.error); return; }
-          const cur = new Map(); const changes = []; const docs = [];
+          const cur = payload.delta ? new Map(prev) : new Map(); const changes = [];
+          (payload.removed || []).forEach(did => { const old = cur.get(did); if (old) { cur.delete(did); changes.push({ type: "removed", doc: old.snap, oldIndex: 0, newIndex: -1 }); } });
           payload.docs.forEach((d, i) => {
             const old = prev.get(d.id); let snap;
             if (old && old.ver === d.ver && old.pw === !!d.pw && old.fc === !!payload.fromCache) snap = old.snap;
             else snap = docSnap(d.id, deepFreeze(d.data), { fromCache: !!payload.fromCache, hasPendingWrites: !!d.pw });
-            docs.push(snap); cur.set(d.id, { ver: d.ver, pw: !!d.pw, fc: !!payload.fromCache, snap });
+            cur.set(d.id, { ver: d.ver, pw: !!d.pw, fc: !!payload.fromCache, snap });
             if (!old) changes.push({ type: "added", doc: snap, oldIndex: -1, newIndex: i });
             else if (old.snap !== snap) changes.push({ type: "modified", doc: snap, oldIndex: i, newIndex: i });
           });
-          for (const [did, old] of prev) if (!cur.has(did)) changes.push({ type: "removed", doc: old.snap, oldIndex: 0, newIndex: -1 });
+          if (!payload.delta) for (const [did, old] of prev) if (!cur.has(did)) changes.push({ type: "removed", doc: old.snap, oldIndex: 0, newIndex: -1 });
+          const docs = [...cur.keys()].sort().map(k => cur.get(k).snap);
           prev = cur;
-          try { next({ docs, size: docs.length, empty: !docs.length, docChanges: () => changes, metadata: { fromCache: !!payload.fromCache, hasPendingWrites: payload.docs.some(d => d.pw) } }); }
+          try { next({ docs, size: docs.length, empty: !docs.length, docChanges: () => changes, metadata: { fromCache: !!payload.fromCache, hasPendingWrites: [...cur.values()].some(d => d.pw) } }); }
           catch (e) { console.error("erro no onSnapshot", e); }
         });
         call("listen", { id, path, filters, order, lim });

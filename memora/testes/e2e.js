@@ -1,4 +1,4 @@
-// Bateria completa: node e2e.js [web|ipad|sync|limits|migra|extra|gerar|cartoes|pastas|organizar|all]
+// Bateria completa: node e2e.js [web|ipad|sync|limits|migra|extra|gerar|cartoes|pastas|organizar|all|ano]
 const fs = require("fs"); const path = require("path");
 const H = require("./harness"); const { Cloud, openDevice, reload, ev, cloudReady, settle, sleep, R, ok, section, step } = H;
 const { walkthrough, U } = require("./walkthrough");
@@ -223,9 +223,11 @@ async function scenarioLimits(browser) {
   await sleep(2500);
   const st = await ev(L, () => ({ txt: document.querySelector("#syncTxt").textContent, has: !!SIMS.novo }));
   ok(/Nuvem cheia/.test(st.txt) && st.has, "status 'Nuvem cheia' e o simulado continua salvo no aparelho: " + st.txt);
+  ok(await ev(L, () => /encheu/.test(document.querySelector("#fullBanner")?.textContent || "")), "aviso grande na tela, com o botão de baixar cópia");
   c2.maxDocs = 25000; await ev(L, () => { Cloud.wait = 0; Cloud.full = false; Cloud.flush(); });
   await settle([L], 15000);
   ok(c2.userDocs().some(d => d.id === "sim.novo"), "quando há espaço de novo, sobe sozinho");
+  ok(await ev(L, () => !document.querySelector("#fullBanner")), "o aviso some quando a nuvem volta a ter espaço");
   c2.inject("update", "invalid_argument", 1, "task.");
   await ev(L, () => { S.tasks[0].text = "Editada depois da recusa"; commit("tasks"); });
   await settle([L], 20000); await sleep(400); await settle([L], 20000);
@@ -331,6 +333,7 @@ async function scenarioExtra(browser, files) {
     if (which === "cartoes" || which === "all") await require("./cartoes").scenarioCartoes(browser);
     if (which === "pastas" || which === "all") await require("./pastas").scenarioPastas(browser);
     if (which === "organizar" || which === "all") await require("./organizar").scenarioOrganizar(browser);
+    if (which === "ano") await require("./ano").scenarioAno(browser);   // teste de carga: um ano de uso pesado (não entra no "all")
   } catch (e) { R.fail.push("EXCEÇÃO GERAL: " + (e.stack || e)); console.log(e); }
   await browser.close();
   console.log(`\n==== ${R.pass} verificações passaram, ${R.fail.length} falharam (${((Date.now() - t0) / 1000).toFixed(0)} s) ====`);

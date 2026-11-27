@@ -121,6 +121,8 @@ textarea{resize:vertical;min-height:80px}
 .selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;position:sticky;top:8px;z-index:4}
 .selbar select{width:auto;max-width:100%}
 .item.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.fullbanner{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:45;width:min(760px,calc(100% - 24px));display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--panel);border:2px solid var(--bad);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.fullbanner b{color:var(--bad)}.fullbanner span{flex:1 1 260px;font-size:.9rem}
 .orgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px}
 .orgai{display:flex;flex-direction:column;gap:10px;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
 .orgai h2{display:flex;gap:8px;align-items:center}.orgai h2 svg{width:18px;height:18px;color:var(--accent)}
@@ -906,6 +908,7 @@ const Cloud = {
     if (big) txt += ` · ${big} ite${big === 1 ? "m grande demais ficou" : "ns grandes demais ficaram"} só neste aparelho`;
     d.className = "dot " + kind; $("#syncTxt").textContent = txt; $("#sync").title = txt;
     const md = $("#moreDot"); if (md) md.className = "dot " + kind;
+    fullBanner(st !== "local" && this.full, n);
     const ci = $("#cloudTxt"); if (ci) { ci.textContent = txt; const cd = $("#cloudDot"); if (cd) cd.className = "dot " + kind; }
   }
 };
@@ -971,6 +974,18 @@ window.addEventListener("online", () => { Cloud.offline = false; Cloud.wait = 0;
 setInterval(() => { if (pendingDocs().length) Cloud.flush(); }, 20000);
 try { Promise.resolve(navigator.storage?.persist?.()).catch(() => {}); } catch {}
 
+function fullBanner(on, n) {
+  let b = $("#fullBanner");
+  if (!on) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement("div"); b.id = "fullBanner"; b.className = "fullbanner"; b.setAttribute("role", "alert"); document.body.appendChild(b); }
+  b.innerHTML = `<b>A nuvem do Memora encheu.</b><span>${n ? `${n} ${n === 1 ? "alteração está" : "alterações estão"} só neste aparelho. ` : ""}Não feche o app antes de baixar uma cópia de segurança.</span><button class="btn sm" id="fullBk">Baixar cópia agora</button><button class="btn sm ghost" id="fullHelp">O que fazer</button>`;
+  b.querySelector("#fullBk").onclick = () => exportBackup();
+  b.querySelector("#fullHelp").onclick = () => modal(`<h2>A nuvem do Memora encheu</h2>
+    <p style="margin:0">Tudo o que já estava salvo continua na nuvem. As mudanças novas ficam guardadas neste aparelho e sobem sozinhas quando houver espaço.</p>
+    <p style="margin:0"><b>Para não perder nada:</b> toque em Baixar cópia de segurança. Depois libere espaço apagando o que você não usa mais, por exemplo simulados antigos (as questões criadas pela IA são o que mais ocupa) ou pastas de cartões que já não estuda, e esvazie a lixeira em Dados.</p>
+    <p class="sub" style="margin:0">Se este link do Memora foi compartilhado e outras pessoas também usam, o espaço é dividido com elas.</p>
+    <div class="row end"><button class="btn" data-x>Fechar</button><button class="btn pri" data-ok>Baixar cópia de segurança</button></div>`, (m, close) => { m.querySelector("[data-x]").onclick = close; m.querySelector("[data-ok]").onclick = () => { close(); exportBackup(); }; });
+}
 /* ---- aparelhos ligados à mesma conta ---- */
 function deviceList() {     // um item por aparelho (mesmo nome = mesmo aparelho), o mais recente
   const by = new Map();
@@ -3237,7 +3252,7 @@ function fallbackCopy(t, onOk) { modal(`<h2>Copie o texto</h2><textarea id="cpy"
 function backupObj() { const o = { app: "memora", version: 5, exportedAt: new Date().toISOString(), cards: CARDS, sims: SIMS }; SECTIONS.forEach(s => o[s] = S[s]); return o; }
 const isFramed = () => { try { return window.top !== window; } catch { return true; } };
 async function exportBackup() {
-  const data = JSON.stringify(backupObj(), null, 1), filename = `memora-backup-${dkey()}.json`;
+  const o = backupObj(); let data = JSON.stringify(o); if (data.length < 4 * 1048576) data = JSON.stringify(o, null, 1); const filename = `memora-backup-${dkey()}.json`;   // grande: sem espaços, para caber
   const dl = window.claude?.use ? await window.claude.use("downloads") : null;
   if (dl) { try { await dl.save({ filename, data }); backupDone(); toast("Backup salvo"); } catch (e) { if (e?.code !== "dismissed" && e?.code !== "declined") copyText(data, backupDone); } }
   else if (isFramed()) copyText(data, backupDone);
@@ -3246,6 +3261,7 @@ async function exportBackup() {
 function mergeById(a, b) { const m = new Map((a || []).map(x => [x.id, x])); (b || []).forEach(x => { if (x && x.id && !m.has(x.id)) m.set(x.id, x); }); return [...m.values()]; }
 function importBackupText(txt) {
   let o; try { o = JSON.parse(txt); } catch { return toast("Esse texto não é um backup válido"); }
+  if (o && o.packed === "gzip-base64") return unpackBackup(txt).then(importBackupText).catch(e => toast(e && e.message ? e.message : "Não deu para abrir essa cópia."));
   if (o["vest-pendencias-v1"] || Object.keys(o).some(k => k.startsWith("vest-"))) return importLegacyText(txt);
   if (o.app !== "memora") return toast("Esse arquivo não parece ser um backup do Memora");
   ["tasks", "sessions", "exams", "agenda", "decks", "simfolders", "errors", "trash"].forEach(s => S[s] = mergeById(S[s], o[s]));
@@ -3348,7 +3364,22 @@ function bindTrash(v) {
 }
 
 /* ---- cópias automáticas diárias na nuvem (sem lembretes) ---- */
-const AUTOBK_KEEP = 5;
+const AUTOBK_KEEP = 5, BK_MAX = 19.5 * 1048576;   // a plataforma aceita arquivos de até 20 MB
+const b64enc = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const b64dec = s => { const bin = atob(s); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8; };
+async function packBackup(data) {      // um ano de uso pesado vira um arquivo várias vezes menor
+  if (typeof CompressionStream !== "function") return data;
+  try {
+    const gz = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
+    return JSON.stringify({ app: "memora", packed: "gzip-base64", bytes: data.length, data: b64enc(gz) });
+  } catch (e) { console.warn("compactar cópia", e); return data; }
+}
+async function unpackBackup(txt) {
+  let o; try { o = JSON.parse(txt); } catch { return txt; }
+  if (!o || o.packed !== "gzip-base64" || typeof o.data !== "string") return txt;
+  if (typeof DecompressionStream !== "function") throw new Error("Este navegador não abre cópias compactadas");
+  return await new Response(new Blob([b64dec(o.data)]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
 function backupDone() { S.settings.lastExport = Date.now(); commit("settings"); }
 const AutoBk = {
   st: "?", t: null, busy: false, A: null,
@@ -3370,9 +3401,12 @@ const AutoBk = {
     try {
       const o = backupObj(); const sig = hash(stable(Object.assign({}, o, { exportedAt: 0 })));
       if (!force && AUTOBK.some(b => b.sig === sig)) return false;
-      const data = JSON.stringify(o);
-      const r = await this.A.upload(new Blob([data], { type: "application/json" }), { type: "application/json" });
-      AUTOBK.push({ id: r.id, at: Date.now(), size: r.sizeBytes || data.length, sig, dev: DEV });
+      const data = await packBackup(JSON.stringify(o));
+      const blob = new Blob([data], { type: "application/json" });
+      if (blob.size > BK_MAX) { this.big = true; if (force) toast("Seus dados passaram do tamanho de uma cópia automática. Eles continuam salvos na nuvem; para ter uma cópia, use Baixar cópia de segurança."); return false; }
+      this.big = false;
+      const r = await this.A.upload(blob, { type: "application/json" });
+      AUTOBK.push({ id: r.id, at: Date.now(), size: r.sizeBytes || blob.size, sig, dev: DEV });
       this.st = "on";
       for (const b of [...AUTOBK].sort((a, x) => x.at - a.at).slice(AUTOBK_KEEP)) { try { await this.A.delete(b.id); } catch {} AUTOBK = AUTOBK.filter(x => x !== b); }
       if (diffKind("abk")) changedLocally(false);
@@ -3397,7 +3431,7 @@ function bindAutoBk(v) {
   v.querySelectorAll("[data-abk]").forEach(r => { const b = AUTOBK.find(x => x.id === r.dataset.abk); if (!b) return; r.querySelector("[data-abkr]").onclick = () => confirmBox(`Juntar a cópia de ${new Date(b.at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}? Nada é apagado: só volta o que estiver faltando.`, "Juntar cópia", () => restoreAutoBk(b)); });
 }
 async function restoreAutoBk(b) {
-  try { const r = await fetch("/_blob/" + b.id); if (!r.ok) throw new Error("status " + r.status); importBackupText(await r.text()); }
+  try { const r = await fetch("/_blob/" + b.id); if (!r.ok) throw new Error("status " + r.status); importBackupText(await unpackBackup(await r.text())); }
   catch (e) { console.warn(e); toast("Não deu para abrir essa cópia agora."); }
 }
 /* lixeira: depois de 30 dias o item sai de vez (cartões e simulados excluídos também) */
