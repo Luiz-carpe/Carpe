@@ -16,7 +16,7 @@ https://claude.ai/artifact/464ZVG7AE2rmrE9AqHwnCr
 cd memora/testes
 npm install
 npx playwright install chromium   # só se o Chromium do Playwright ainda não estiver instalado
-node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar | cartoes | pastas
+node e2e.js all                   # ou: web | ipad | sync | limits | migra | extra | gerar | cartoes | pastas | organizar
 ```
 
 ## Simulados inéditos com IA
@@ -57,6 +57,24 @@ tempo; são só dois níveis.
   - uma subpasta pode ir com os cartões ou deixá-los soltos na pasta maior;
   - uma pasta leva as subpastas junto;
   - tudo vai para a lixeira e volta inteiro.
+
+### Organizar cartões que já existem
+
+"Organizar cartões", na tela de flashcards ou dentro de uma pasta, reúne os cartões de todas as pastas.
+
+- **Achar:** filtros por pasta (a pasta inteira, só os cartões soltos ou uma subpasta), busca sem acento na
+  frente, no verso e nas etiquetas, e filtro por etiqueta.
+- **Selecionar:** toque nos cartões ou em "Marcar os N", que pega todos os encontrados, inclusive os que ainda
+  não apareceram na tela (a lista mostra 200 por vez).
+- **Mover:** escolha uma pasta ou subpasta, ou crie uma nova na hora. Toda movimentação pode ser desfeita, e
+  mover não muda o histórico de revisão.
+
+Com uma pasta escolhida, "Organizar com IA" pede à IA a subpasta de cada cartão. A IA prefere as subpastas que
+já existem, pode criar novas se isso estiver permitido, e vai em partes de 120 cartões, levando os nomes já
+usados para a próxima parte.
+
+Antes de aplicar, o aluno confere a sugestão: renomeia as subpastas novas e desmarca o que não quiser mover.
+Nada muda antes de tocar em "Mover". Desfazer devolve os cartões e apaga as subpastas que ficaram vazias.
 
 No banco de dados, uma subpasta é um baralho com `parent` apontando para a pasta principal. Uma subpasta cuja
 pasta sumiu (por exemplo, apagada em outro aparelho) passa a aparecer como pasta principal, e nada se perde.

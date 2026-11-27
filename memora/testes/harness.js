@@ -108,6 +108,12 @@ function defaultAI(a, cloud) {
     return { json: { questoes: lista.map(q => ({ n: q.n, texto: longo ? `Texto-base da questão ${q.n}. ` + "Situação do cotidiano descrita com dados e contexto para a leitura do estudante. ".repeat(14) : "", enunciado: `(${q.disciplina}) Enunciado inédito da questão ${q.n} sobre ${q.conteudo}. Assinale a alternativa correta.`, alternativas: L.map(l => `${l === q.correta ? "Resposta certa" : "Distrator"} ${l} da questão ${q.n}` + (longo ? " com uma explicação um pouco mais longa para ficar parecida com a prova real" : "")), gabarito: q.correta, resolucao: `A correta é a ${q.correta} porque aplica o conceito pedido. As outras confundem a definição.` + (longo ? " Detalhes adicionais da resolução para o estudante revisar depois.".repeat(5) : "") })) }, delay: cloud.genDelay || 0 };
   }
   if (/proposta de redação INÉDITA/.test(p)) return { json: { tema: "Os desafios do acesso à leitura no Brasil", genero: "Texto dissertativo-argumentativo", instrucoes: "Escreva de 7 a 30 linhas. Fuga ao tema leva nota zero.", textos: ["Texto motivador um, escrito para o simulado.", "Texto motivador dois.", "Texto motivador três."] } };
+  if (/Você organiza flashcards/.test(p)) {
+    const list = JSON.parse((p.match(/^Cartões \(n, frente, etiquetas\): (.*)$/m) || [])[1] || "[]");
+    const only = /Use SOMENTE as subpastas/.test(p);
+    const pick = f => /mitose|meiose|ribossomo|mitoc/i.test(f) ? "Citologia" : /DNA|gene|alelo/i.test(f) ? "Genética" : /fotoss|xilema|floema/i.test(f) ? "Botânica" : /cadeia|bioma|popula/i.test(f) ? "Ecologia" : /Massa (\d+)/.test(f) ? "Grupo " + (+f.match(/Massa (\d+)/)[1] % 3) : "";
+    return { json: { cartoes: list.map(c => ({ n: c.n, subpasta: only && !/Botânica|Citologia/.test(pick(c.f)) ? "" : pick(c.f) })) }, delay: (cloud && cloud.orgDelay) || 0 };
+  }
   if (/Crie UM flashcard de revisão/.test(p)) return { json: { front: "Como calcular rendimento?", back: "Rendimento = real / teórico × 100%" } };
   if (/Explique de forma clara/.test(p)) return { text: "Ka mede a força de um ácido. Exemplo: ácido acético. Pegadinha: Ka alto = ácido forte." };
   if (/resolução caprichada/.test(p)) return { text: "O QUE A QUESTÃO PEDE: calcular o rendimento.\nRESOLUÇÃO PASSO A PASSO: ...\nPEGADINHA E COMO EVITAR: unidades." };

@@ -121,6 +121,12 @@ textarea{resize:vertical;min-height:80px}
 .selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;position:sticky;top:8px;z-index:4}
 .selbar select{width:auto;max-width:100%}
 .item.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.orgf{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px}
+.orgai{display:flex;flex-direction:column;gap:10px;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.orgai h2{display:flex;gap:8px;align-items:center}.orgai h2 svg{width:18px;height:18px;color:var(--accent)}
+.oagroup{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--line)}
+.oaname{max-width:240px;padding:6px 8px}
+.chkline{display:flex;gap:8px;align-items:flex-start;cursor:pointer}.chkline input{flex:none;margin-top:3px}
 .n-new{color:var(--info)} .n-due{color:var(--ok)} .n-lrn{color:var(--bad)}
 .study{max-width:720px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:14px}
 .fc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px 24px;min-height:240px;display:flex;flex-direction:column;gap:16px;justify-content:center}
@@ -1587,13 +1593,14 @@ function editBlock(b) {
 }
 
 /* ---- Flashcards ---- */
-let studyState = null, fcDeck = null, fcSearch = "", fcSel = null;
+let studyState = null, fcDeck = null, fcSearch = "", fcSel = null, orgState = null;
 VIEWS.flashcards = () => {
   if (studyState) return studyView();
+  if (orgState) return orgView();
   if (fcDeck) return deckView();
   const decks = topDecks();
   return `<div class="head"><div><h1>Flashcards</h1><p>${liveCards().length} cartões · ${dueCards().length} para revisar · ${newCards().length} novos</p></div>
-  <div class="row"><button class="btn" data-go="ia">${ico("ia")}Criar com IA</button><button class="btn" id="impFc">Importar planilha</button><button class="btn" id="newDeck">${ico("plus")}Nova pasta</button><button class="btn pri" id="studyAll" ${dueCards().length + newCards().length ? "" : "disabled"}>Estudar tudo</button></div></div>
+  <div class="row"><button class="btn" data-go="ia">${ico("ia")}Criar com IA</button><button class="btn" id="impFc">Importar planilha</button>${liveCards().length ? `<button class="btn" id="orgFc">Organizar cartões</button>` : ""}<button class="btn" id="newDeck">${ico("plus")}Nova pasta</button><button class="btn pri" id="studyAll" ${dueCards().length + newCards().length ? "" : "disabled"}>Estudar tudo</button></div></div>
   ${decks.length ? `<div class="grid g3">${decks.map(d => { const subs = subDecks(d.id); const c = treeCards(d.id); const due = dueCards(d.id).length, nw = newCards(d.id).length; const acc = c.reduce((a, x) => a + x.ok, 0), tot = c.reduce((a, x) => a + x.ok + x.bad, 0);
     return `<div class="card deck" data-deck="${d.id}"><div class="ttl" style="margin:0"><h2 class="dname">${ico("folder")}<span>${esc(d.name)}</span></h2>${subjPill(d.subject)}</div>
     <div class="nums"><span class="n-due">${due} revisar</span><span class="n-new">${nNew(nw)}</span><span class="sub">${c.length} total</span></div>
@@ -1606,9 +1613,11 @@ VIEWS.flashcards = () => {
 BIND.flashcards = v => {
   bindCommon(v);
   if (studyState) return bindStudy(v);
+  if (orgState) return bindOrg(v);
   if (fcDeck) return bindDeck(v);
   [$("#newDeck"), $("#newDeck2")].forEach(b => b && (b.onclick = () => editDeck()));
   const ifc = $("#impFc"); if (ifc) ifc.onclick = () => openImport();
+  const ofc = $("#orgFc"); if (ofc) ofc.onclick = () => openOrganizer("");
   const sa = $("#studyAll"); if (sa) sa.onclick = () => startStudy(null);
   v.querySelectorAll("[data-deck]").forEach(c => c.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const id = c.dataset.deck; if (b.dataset.act === "study") startStudy(id); else if (b.dataset.act === "open") { fcDeck = id; fcSel = null; render(); window.scrollTo(0, 0); }
@@ -1648,7 +1657,7 @@ function deckView() {
   const moveTo = par ? par.id : (subs[0] ? subs[0].id : "");
   return `<div class="head"><div><button class="btn sm ghost" id="back">← ${par ? esc(par.name) : "Pastas"}</button><h1 style="margin-top:8px">${par ? `<span class="crumb">${esc(par.name)} ›</span> ` : ""}${esc(d.name)}</h1><p>${nCards(all.length)}${subs.length ? ` · ${own.length} soltos na pasta e ${all.length - own.length} em ${subs.length} subpasta${subs.length > 1 ? "s" : ""}` : ""} · ${due} para revisar · ${nNew(nw)}</p></div>
   <div class="row"><button class="btn pri" id="studyD" ${due + nw ? "" : "disabled"}>${subs.length ? "Estudar tudo" : "Estudar"}</button><button class="btn" id="editD">Editar</button><button class="btn" id="bulk">Colar em lote</button><button class="btn" id="impDk">Importar planilha</button><button class="btn" data-go="ia">${ico("ia")}IA</button><button class="btn" id="addC">${ico("plus")}Cartão</button></div></div>
-  ${par ? "" : `<div class="card"><div class="ttl"><h2>Subpastas</h2><button class="btn sm" id="newSub">${ico("plus")}Nova subpasta</button></div>
+  ${par ? "" : `<div class="card"><div class="ttl"><h2>Subpastas</h2><div class="row">${all.length > 1 ? `<button class="btn sm" id="orgD">${ico("ia")}Organizar cartões</button>` : ""}<button class="btn sm" id="newSub">${ico("plus")}Nova subpasta</button></div></div>
     ${subs.length ? `<div class="list">${subs.map(s => { const n = deckCards(s.id).length, sd = dueCards(s.id).length, sn = newCards(s.id).length;
       return `<div class="item click" data-subrow="${s.id}" tabindex="0" role="button"><span class="dico">${ico("folder")}</span><div class="grow"><div class="t"><b>${esc(s.name)}</b></div><div class="sub">${nCards(n)} · <span class="n-due">${sd} revisar</span> · <span class="n-new">${nNew(sn)}</span></div></div><button class="btn sm pri" data-sstudy="${s.id}" ${sd + sn ? "" : "disabled"}>Estudar</button></div>`; }).join("")}</div>`
     : `<p class="sub" style="margin:0">Separe os cartões desta pasta por conteúdo. Ex.: em Biologia, crie Citologia, Genética e Ecologia; em Física, Cinemática e Dinâmica.</p>`}</div>`}
@@ -1669,6 +1678,7 @@ function bindDeck(v) {
   $("#bulk").onclick = () => bulkImport(d);
   $("#impDk").onclick = () => openImport(d.id);
   const ns = $("#newSub"); if (ns) ns.onclick = () => editDeck(null, () => render(), { parent: d.id });
+  const od = $("#orgD"); if (od) od.onclick = () => openOrganizer("t:" + d.id);
   v.querySelectorAll("[data-subrow]").forEach(r => { r.onclick = e => { if (!e.target.closest("[data-sstudy]")) open(r.dataset.subrow); }; r.onkeydown = e => { if (e.key === "Enter") open(r.dataset.subrow); }; });
   v.querySelectorAll("[data-sstudy]").forEach(b => b.onclick = () => startStudy(b.dataset.sstudy));
   const s = $("#fcSearch"); s.oninput = () => { fcSearch = s.value; const pos = s.selectionStart; render(); const n = $("#fcSearch"); n.focus(); n.setSelectionRange(pos, pos); };
@@ -1695,13 +1705,173 @@ function bindDeck(v) {
     }); });
   }
 }
-function moveCards(ids, to) {
+function moveCards(ids, to) { fcSel = null; moveCardsTo(ids, to); }
+/* ---- organizar: achar cartões em qualquer pasta e mover, à mão ou com sugestão da IA ---- */
+function moveCardsTo(ids, to, after) {
   if (!deckById(to)) return toast("Escolha a pasta de destino");
-  const list = ids.filter(id => CARDS[id] && !CARDS[id].deleted && CARDS[id].deck !== to);
-  list.forEach(id => { CARDS[id].deck = to; CARDS[id].updatedAt = Date.now(); });
+  const prev = {}; const list = ids.filter(id => CARDS[id] && !CARDS[id].deleted && CARDS[id].deck !== to);
+  list.forEach(id => { prev[id] = CARDS[id].deck; CARDS[id].deck = to; CARDS[id].updatedAt = Date.now(); });
   if (list.length && diffKind("card", list)) changedLocally();
-  fcSel = null; render();
-  toast(list.length ? `${nCards(list.length)} ${list.length === 1 ? "movido" : "movidos"} para "${deckPath(to)}"` : "Os cartões já estavam nessa pasta");
+  if (after) after(); render();
+  if (!list.length) return toast("Os cartões já estavam nessa pasta");
+  toastUndo(`${nCards(list.length)} ${list.length === 1 ? "movido" : "movidos"} para "${deckPath(to)}"`, () => {
+    const back = list.filter(id => CARDS[id] && !CARDS[id].deleted && CARDS[id].deck === to);
+    back.forEach(id => { CARDS[id].deck = deckById(prev[id]) ? prev[id] : to; CARDS[id].updatedAt = Date.now(); });
+    if (back.length && diffKind("card", back)) changedLocally(); render(); toast("Movimentação desfeita");
+  });
+}
+function openOrganizer(deck) { orgState = { deck: deck || "", q: "", tag: "", sel: new Set(), lim: 200, to: "", ai: null, aiNew: true, aiAll: false }; fcSel = null; render(); window.scrollTo(0, 0); }
+function orgMatches(st) {
+  const tree = st.deck.startsWith("t:") ? new Set(deckTree(st.deck.slice(2))) : null; const q = hnorm(st.q.trim());
+  const pm = new Map(S.decks.map(d => [d.id, deckPath(d.id)]));
+  return liveCards().filter(c => {
+    if (st.deck === "__none") { if (pm.has(c.deck)) return false; }
+    else if (tree) { if (!tree.has(c.deck)) return false; }
+    else if (st.deck && c.deck !== st.deck) return false;
+    if (st.tag && !(c.tags || []).includes(st.tag)) return false;
+    return !q || hnorm(c.front + " " + c.back + " " + (c.tags || []).join(" ")).includes(q);
+  }).sort((a, b) => (pm.get(a.deck) || "").localeCompare(pm.get(b.deck) || "", "pt-BR") || b.createdAt - a.createdAt);
+}
+const orgCount = st => `${st.sel.size} selecionado${st.sel.size === 1 ? "" : "s"}`;
+function orgView() {
+  const st = orgState; const all = orgMatches(st); const shown = all.slice(0, st.lim);
+  for (const id of [...st.sel]) if (!CARDS[id] || CARDS[id].deleted) st.sel.delete(id);
+  const pm = new Map(S.decks.map(d => [d.id, deckPath(d.id)]));
+  const orphans = liveCards().some(c => !pm.has(c.deck));
+  const tm = new Map(); liveCards().forEach(c => (c.tags || []).forEach(t => tm.set(t, (tm.get(t) || 0) + 1)));
+  const tags = [...tm].sort((a, b) => b[1] - a[1]).slice(0, 60).map(x => x[0]);
+  const folderOpts = `<option value="">Todas as pastas</option>${topDecks().map(d => { const subs = subDecks(d.id);
+    return subs.length ? `<option value="t:${esc(d.id)}" ${st.deck === "t:" + d.id ? "selected" : ""}>${esc(d.name)} (pasta inteira)</option><option value="${esc(d.id)}" ${st.deck === d.id ? "selected" : ""}>${esc(d.name)} · só os soltos</option>${subs.map(s => `<option value="${esc(s.id)}" ${st.deck === s.id ? "selected" : ""}>${esc(d.name)} › ${esc(s.name)}</option>`).join("")}`
+      : `<option value="${esc(d.id)}" ${st.deck === d.id || st.deck === "t:" + d.id ? "selected" : ""}>${esc(d.name)}</option>`; }).join("")}${orphans ? `<option value="__none" ${st.deck === "__none" ? "selected" : ""}>Sem pasta</option>` : ""}`;
+  const fd = deckById(st.deck.startsWith("t:") ? st.deck.slice(2) : st.deck);
+  st.aiDeck = st.ai ? st.ai.deck : fd && !deckParentOf(fd) ? fd.id : "";
+  return `<div class="head"><div><button class="btn sm ghost" id="orgBack">← Voltar</button><h1 style="margin-top:8px">Organizar cartões</h1><p>Ache os cartões que já existem e mande para a pasta ou subpasta certa. Mover não muda o histórico de revisão dos cartões.</p></div></div>
+  ${st.aiDeck ? orgAIPanel() : ""}
+  <div class="card">
+    <div class="orgf"><label class="field"><span>Pasta</span><select id="orgDeck">${folderOpts}</select></label>
+    <label class="field"><span>Buscar</span><input type="search" id="orgQ" value="${esc(st.q)}" placeholder="Palavra da frente, do verso ou etiqueta"></label>
+    ${tags.length ? `<label class="field"><span>Etiqueta</span><select id="orgTag"><option value="">Todas</option>${tags.map(t => `<option ${st.tag === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>` : ""}</div>
+    ${!st.aiDeck ? `<p class="sub" style="margin:0 0 10px">Dica: escolha uma pasta no filtro para a IA sugerir em qual subpasta cada cartão fica.</p>` : ""}
+    <div class="selbar"><b id="orgN">${orgCount(st)}</b><span class="sub">de ${nCards(all.length)}</span><button class="btn sm ghost" id="orgAll" ${all.length ? "" : "disabled"}>Marcar ${all.length === 1 ? "o cartão" : `os ${all.length}`}</button><button class="btn sm ghost" id="orgNone" ${st.sel.size ? "" : "disabled"}>Limpar</button><span class="sub">Mover para</span><select id="orgTo" aria-label="Mover para">${deckOptions(st.to)}<option value="__new">+ Nova pasta ou subpasta…</option></select><button class="btn sm pri" id="orgMove" ${st.sel.size ? "" : "disabled"}>Mover</button></div>
+    ${shown.length ? `<div class="list">${shown.map(c => { const on = st.sel.has(c.id); return `<div class="item click ${on ? "sel" : ""}" data-oc="${c.id}"><button class="chk ${on ? "on" : ""}" aria-label="Selecionar" aria-pressed="${on}"></button><div class="grow"><div class="t" style="font-weight:600">${esc(c.front.slice(0, 160))}</div><div class="sub t">${esc(c.back.slice(0, 140))}</div></div><span class="pill" title="Pasta atual">${esc(pm.get(c.deck) || "sem pasta")}</span></div>`; }).join("")}</div>
+      ${all.length > shown.length ? `<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="orgMore">Mostrar mais (${all.length - shown.length} restantes)</button></div>` : ""}` : `<div class="empty">Nenhum cartão com esses filtros.</div>`}
+  </div>`;
+}
+function bindOrg(v) {
+  const st = orgState;
+  $("#orgBack").onclick = () => { if (st.ai && st.ai.ctl) st.ai.ctl.abort(); orgState = null; render(); window.scrollTo(0, 0); };
+  $("#orgDeck").onchange = e => { st.deck = e.target.value; st.lim = 200; if (st.ai && !st.ai.busy) st.ai = null; render(); };
+  const q = $("#orgQ"); q.oninput = () => { st.q = q.value; st.lim = 200; const pos = q.selectionStart; render(); const n = $("#orgQ"); n.focus(); n.setSelectionRange(pos, pos); };
+  const tg = $("#orgTag"); if (tg) tg.onchange = () => { st.tag = tg.value; st.lim = 200; render(); };
+  const paint = () => { const n = $("#orgN"); if (n) n.textContent = orgCount(st); ["#orgMove", "#orgNone"].forEach(s => { const b = $(s); if (b) b.disabled = !st.sel.size; }); };
+  v.querySelectorAll("[data-oc]").forEach(r => r.onclick = () => {
+    const id = r.dataset.oc; if (st.sel.has(id)) st.sel.delete(id); else st.sel.add(id);
+    const on = st.sel.has(id); r.classList.toggle("sel", on); const k = r.querySelector(".chk"); if (k) { k.classList.toggle("on", on); k.setAttribute("aria-pressed", on); } paint();
+  });
+  $("#orgAll").onclick = () => { orgMatches(st).forEach(c => st.sel.add(c.id)); render(); };
+  $("#orgNone").onclick = () => { st.sel.clear(); render(); };
+  const more = $("#orgMore"); if (more) more.onclick = () => { st.lim += 200; render(); };
+  $("#orgTo").onchange = e => { if (e.target.value !== "__new") st.to = e.target.value; };
+  $("#orgMove").onclick = () => { const to = $("#orgTo").value; const ids = [...st.sel]; if (!ids.length) return;
+    if (to === "__new") return editDeck(null, nd => { st.to = nd.id; moveCardsTo(ids, nd.id, () => st.sel.clear()); });
+    st.to = to; moveCardsTo(ids, to, () => st.sel.clear()); };
+  bindOrgAI(v);
+}
+/* a IA sugere em qual subpasta cada cartão fica; nada muda até o aluno conferir e aplicar */
+function orgAIPanel() {
+  const st = orgState; const A = st.ai; const d = deckById(st.aiDeck); if (!d) return "";
+  if (A && A.groups) {
+    const nOn = A.groups.reduce((a, g) => a + g.ids.filter(id => !g.off.has(id) && CARDS[id]).length, 0);
+    return `<div class="card orgai"><div class="ttl"><h2>${ico("ia")}Sugestão da IA para "${esc(d.name)}"</h2><div class="row"><button class="btn ghost" id="oaDiscard">Descartar</button><button class="btn pri" id="oaApply" ${nOn ? "" : "disabled"}>Mover ${nCards(nOn)}</button></div></div>
+    <p class="sub" style="margin:0">Confira antes de aplicar: dá para renomear as subpastas novas e desmarcar o cartão que não quiser mover.${A.keep ? ` ${nCards(A.keep)} ${A.keep === 1 ? "fica onde está" : "ficam onde estão"}.` : ""}</p>
+    ${A.groups.length ? A.groups.map((g, gi) => `<div class="oagroup"><div class="row" style="gap:8px"><span class="dico">${ico("folder")}</span>${g.exists ? `<b>${esc(d.name)} › ${esc(g.name)}</b><span class="pill">já existe</span>` : `<span class="sub">${esc(d.name)} ›</span><input type="text" class="oaname" data-oag="${gi}" value="${esc(g.name)}" maxlength="60" aria-label="Nome da subpasta nova"><span class="pill n-new">nova</span>`}<span class="sub" data-oacount="${gi}">${g.ids.length - g.off.size} de ${g.ids.length}</span></div>
+      <div class="list">${g.ids.filter(id => CARDS[id]).map(id => { const on = !g.off.has(id); return `<div class="item click ${on ? "sel" : ""}" data-oac="${gi}" data-id="${id}"><button class="chk ${on ? "on" : ""}" aria-label="Mover este cartão" aria-pressed="${on}"></button><div class="grow t">${esc(CARDS[id].front.slice(0, 150))}</div><span class="pill">${esc(deckPath(CARDS[id].deck))}</span></div>`; }).join("")}</div></div>`).join("")
+      : `<div class="empty">A IA não sugeriu mudanças: os cartões já estão bem organizados.</div>`}</div>`;
+  }
+  const loose = deckCards(d.id).length, total = treeCards(d.id).length, n = st.aiAll ? total : loose;
+  return `<div class="card orgai"><div class="ttl"><h2>${ico("ia")}Organizar "${esc(d.name)}" com IA</h2></div>
+    <p class="sub" style="margin:0">A IA lê os cartões e sugere em qual subpasta cada um fica (por exemplo, Citologia, Genética ou Ecologia). Você confere antes de aplicar.</p>
+    <label class="chkline"><input type="checkbox" id="oaAll" ${st.aiAll ? "checked" : ""}> Reorganizar também os que já estão em subpastas (${total} no total, ${loose} soltos)</label>
+    <label class="chkline"><input type="checkbox" id="oaNew" ${st.aiNew ? "checked" : ""}> Pode criar subpastas novas</label>
+    <div class="row">${A && A.busy ? `<span class="spin"></span><span class="sub" id="oaProg" role="status">${esc(A.phase || "Lendo os cartões…")}</span><button class="btn sm" id="oaCancel">Cancelar</button>` : `<button class="btn pri" id="oaGo" ${n ? "" : "disabled"}>${ico("ia")}Sugerir organização de ${nCards(n)}</button>${n > 600 ? `<span class="sub">A IA organiza 600 por vez.</span>` : ""}`}</div></div>`;
+}
+function bindOrgAI(v) {
+  const st = orgState; const A = st.ai;
+  const al = $("#oaAll"); if (al) al.onchange = () => { st.aiAll = al.checked; render(); };
+  const nw = $("#oaNew"); if (nw) nw.onchange = () => { st.aiNew = nw.checked; };
+  const go = $("#oaGo"); if (go) go.onclick = () => orgAIRun(st.aiDeck);
+  const cc = $("#oaCancel"); if (cc) cc.onclick = () => A && A.ctl && A.ctl.abort();
+  const ds = $("#oaDiscard"); if (ds) ds.onclick = () => { st.ai = null; render(); };
+  const ap = $("#oaApply"); if (ap) ap.onclick = orgAIApply;
+  v.querySelectorAll("[data-oag]").forEach(inp => inp.oninput = () => { A.groups[+inp.dataset.oag].name = inp.value; });
+  v.querySelectorAll("[data-oac]").forEach(r => r.onclick = () => {
+    const g = A.groups[+r.dataset.oac]; const id = r.dataset.id; if (g.off.has(id)) g.off.delete(id); else g.off.add(id);
+    const on = !g.off.has(id); r.classList.toggle("sel", on); const k = r.querySelector(".chk"); if (k) { k.classList.toggle("on", on); k.setAttribute("aria-pressed", on); }
+    const cnt = v.querySelector(`[data-oacount="${r.dataset.oac}"]`); if (cnt) cnt.textContent = `${g.ids.length - g.off.size} de ${g.ids.length}`;
+    const nOn = A.groups.reduce((a, x) => a + x.ids.filter(i => !x.off.has(i) && CARDS[i]).length, 0); const b = $("#oaApply"); if (b) { b.textContent = `Mover ${nCards(nOn)}`; b.disabled = !nOn; }
+  });
+}
+async function orgAIRun(deckId) {
+  const ai = await getAI(); if (!ai) return toast("Abra o Memora no Claude para usar a IA");
+  const st = orgState; const d = deckById(deckId); if (!st || !d) return;
+  const cards = (st.aiAll ? treeCards(d.id) : deckCards(d.id)).slice(0, 600);
+  if (!cards.length) return toast("Não há cartões para organizar nesta pasta");
+  const ctl = new AbortController(); st.ai = { deck: d.id, busy: true, ctl, phase: "Lendo os cartões…" }; render();
+  const names = subDecks(d.id).map(s => s.name); const assign = new Map();
+  try {
+    for (let i = 0; i < cards.length; i += 120) {
+      const batch = cards.slice(i, i + 120);
+      if (st.ai) { st.ai.phase = `Organizando ${i + batch.length} de ${nCards(cards.length)}…`; const p = $("#oaProg"); if (p) p.textContent = st.ai.phase; }
+      const prompt = `Você organiza flashcards de um estudante de vestibular em subpastas por conteúdo.
+Pasta: "${d.name}"${d.subject ? ` (matéria: ${d.subject})` : ""}.
+Subpastas que já existem ou já foram sugeridas: ${names.length ? names.join("; ") : "nenhuma"}.
+${st.aiNew ? "Prefira as subpastas da lista; crie uma subpasta nova só quando o conteúdo não couber em nenhuma. Use nomes curtos de conteúdo do vestibular (ex.: Citologia, Genética, Ecologia, Cinemática, Termologia) e evite subpastas com um cartão só." : "Use SOMENTE as subpastas da lista."}
+Se um cartão não couber em nenhuma subpasta, responda "" para ele.
+Cartões (n, frente, etiquetas): ${JSON.stringify(batch.map((c, j) => ({ n: j + 1, f: c.front.slice(0, 160), t: (c.tags || []).slice(0, 3) })))}
+Responda SOMENTE com JSON: {"cartoes": [{"n": número, "subpasta": "nome da subpasta ou vazio"}]}`;
+      const out = await ai.json(prompt, { modelTier: "default", signal: ctl.signal });
+      if (ctl.signal.aborted) throw { code: "cancelled" };
+      (Array.isArray(out?.cartoes) ? out.cartoes : []).forEach(x => {
+        const c = batch[Math.round(+(x && x.n)) - 1]; if (!c) return;
+        let nm = String((x && x.subpasta) || "").replace(/\s+/g, " ").trim().slice(0, 60); if (!nm) return;
+        const known = names.find(n => hnorm(n) === hnorm(nm)); if (known) nm = known; else if (st.aiNew) names.push(nm); else return;
+        assign.set(c.id, nm);
+      });
+    }
+  } catch (e) { if (orgState) orgState.ai = null; if (route === "flashcards") render(); if (e?.code !== "cancelled") toast(aiErr(e)); return; }
+  if (orgState !== st) return;
+  const groups = new Map();
+  for (const c of cards) {
+    const nm = assign.get(c.id); if (!nm) continue;
+    const sub = subDecks(d.id).find(s => hnorm(s.name) === hnorm(nm)); if (sub && c.deck === sub.id) continue;   // já está na subpasta certa
+    const k = hnorm(nm); if (!groups.has(k)) groups.set(k, { name: nm, exists: sub ? sub.id : "", ids: [], off: new Set() }); groups.get(k).ids.push(c.id);
+  }
+  const list = [...groups.values()].sort((a, b) => b.ids.length - a.ids.length || a.name.localeCompare(b.name, "pt-BR"));
+  st.ai = { deck: d.id, groups: list, keep: cards.length - list.reduce((a, g) => a + g.ids.length, 0) };
+  if (route === "flashcards") { render(); window.scrollTo(0, 0); }
+}
+function orgAIApply() {
+  const st = orgState; const A = st.ai; const parent = deckById(A.deck); if (!parent) { st.ai = null; return render(); }
+  const created = [], moves = [];
+  for (const g of A.groups) {
+    const ids = g.ids.filter(id => !g.off.has(id) && CARDS[id] && !CARDS[id].deleted); if (!ids.length) continue;
+    const nm = g.name.replace(/\s+/g, " ").trim().slice(0, 60) || "Outros";
+    let sub = (g.exists && deckById(g.exists)) || subDecks(parent.id).find(s => hnorm(s.name) === hnorm(nm));
+    if (!sub) { sub = { id: uid(), name: nm, subject: parent.subject || "", parent: parent.id, createdAt: Date.now() }; S.decks.push(sub); created.push(sub.id); }
+    ids.forEach(id => { if (CARDS[id].deck !== sub.id) moves.push([id, CARDS[id].deck, sub.id]); });
+  }
+  if (created.length) commit("decks");
+  moves.forEach(([id, , to]) => { CARDS[id].deck = to; CARDS[id].updatedAt = Date.now(); });
+  if (moves.length && diffKind("card", moves.map(m => m[0]))) changedLocally();
+  st.ai = null; st.sel.clear(); render();
+  const nSub = new Set(moves.map(m => m[2])).size;
+  toastUndo(`${nCards(moves.length)} ${moves.length === 1 ? "foi" : "foram"} para ${nSub} subpasta${nSub === 1 ? "" : "s"}${created.length ? ` (${created.length} nova${created.length > 1 ? "s" : ""})` : ""}`, () => {
+    const back = moves.filter(([id, , to]) => CARDS[id] && !CARDS[id].deleted && CARDS[id].deck === to);
+    back.forEach(([id, from]) => { CARDS[id].deck = deckById(from) ? from : parent.id; CARDS[id].updatedAt = Date.now(); });
+    if (back.length && diffKind("card", back.map(m => m[0]))) changedLocally();
+    const empty = created.filter(id => !liveCards().some(c => c.deck === id)); if (empty.length) { S.decks = S.decks.filter(x => !empty.includes(x.id)); commit("decks"); }
+    render(); toast("Organização desfeita");
+  });
 }
 /* excluir pasta (com as subpastas) ou subpasta (com os cartões, ou levando os cartões para a pasta maior) */
 function deleteDeck(d) {
